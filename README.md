@@ -115,6 +115,81 @@ python -m llm_claim_formalization.demo
 uvicorn llm_claim_formalization.demo.server:app --port 8080
 ```
 
+## Demo Interface
+
+![Demo Screenshot](docs/demo-screenshot.png)
+
+The demo provides an interactive interface to test claim verification with side-by-side comparison of "LLM Only" vs "LLM + Verifier" results.
+
+## Troubleshooting
+
+### Ollama Connection Error
+
+If you see `ConnectionError` or "Ollama not running":
+
+```bash
+# Start Ollama service
+ollama serve
+
+# Or on macOS with Homebrew:
+brew services start ollama
+```
+
+### Model Not Found
+
+If you see "model not found" errors:
+
+```bash
+# Pull the required model
+ollama pull lfm2.5-thinking-128k
+
+# Verify it's installed
+ollama list
+```
+
+### Port 8000 Already in Use
+
+If port 8000 is already taken:
+
+```bash
+# Use a different port
+uvicorn llm_claim_formalization.demo.server:app --port 8080
+
+# Then open http://localhost:8080
+```
+
+### Demo Won't Open in Browser
+
+- Manually navigate to http://localhost:8000
+- Check if the server is running (you should see `Uvicorn running on http://127.0.0.1:8000`)
+- Check terminal for error messages
+
+### Python Version Issues
+
+This library requires Python 3.10+. Check your version:
+
+```bash
+python --version  # Should be 3.10 or higher
+```
+
+If you have multiple Python versions:
+
+```bash
+python3.10 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install llm-claim-formalization[demo]
+```
+
+### Import Errors
+
+If you see import errors, ensure all dependencies are installed:
+
+```bash
+pip install -e ".[demo]"  # For development
+# or
+pip install llm-claim-formalization[demo]  # For regular use
+```
+
 ## Architecture
 
 ### 3-Stage Pipeline
