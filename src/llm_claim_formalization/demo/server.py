@@ -38,8 +38,10 @@ async def verify(request: VerifyRequest):
 
     if ir_dict:
         # Successfully formalized - now verify with SAT solver
+        # Add checksum field if missing (required by ProblemIR model - 64 hex chars)
+        if "checksum" not in ir_dict:
+            ir_dict["checksum"] = "0" * 64
         ir = ProblemIR(**ir_dict)
-        verify_request = LLMVerifyRequest(ir=ir, timeout_ms=5000)
 
         if ir.logic == "PROP":
             result = verify_with_sat(ir, timeout_ms=5000)
@@ -47,12 +49,16 @@ async def verify(request: VerifyRequest):
             result = verify_with_fol(ir, timeout_ms=5000)
         else:
             # Fallback to Ollama if unknown logic type
-            result = verify_with_ollama(request.claim)
-            result = {"status": "VERIFIED" if result["verified"] else "REFUTED"}
+            ollama_result = verify_with_ollama(request.claim)
+            verified = ollama_result.get("verified", False)
+            verifier_status = "VALID" if verified else "INVALID"
+            route = "ollama_fallback"
 
-        verified = result["status"] == "VERIFIED"
-        verifier_status = "VALID" if verified else "INVALID"
-        route = ir.logic.lower()
+        # For PROP and FOL, result is an object with .status attribute
+        if ir.logic in ["PROP", "FOL"]:
+            verified = result.status == "VERIFIED"
+            verifier_status = "VALID" if verified else "INVALID"
+            route = ir.logic.lower()
     else:
         # Formalization failed - fall back to Ollama for verifier too
         fallback_result = verify_with_ollama(request.claim)
