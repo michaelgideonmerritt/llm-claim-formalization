@@ -29,31 +29,40 @@
             <div id="result" class="result hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
             <div class="examples">
-                <h3>Example Claims</h3>
+                <h3>Example Claims - Where Small LLMs Fail</h3>
+                <p class="examples-subtitle">These examples show logical errors made by phi4-mini:3.8b that formal verification catches</p>
                 <div class="example-grid" role="group" aria-label="Example claims">
-                    <button class="example-btn" onclick="setExample('If a product costs $100 and I apply a 50% discount followed by another 20% discount, the final price is $40')" aria-label="Try example: Compound discounts">
-                        Compound discounts
+                    <button class="example-btn" onclick="setExample('If P, then Q. Not Q. Therefore, not P')" aria-label="Try example: Modus tollens">
+                        <strong>Modus tollens</strong>
+                        <span class="example-note">LLM confuses with denying antecedent</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If I invest $1000 at 10% annual interest compounded monthly for 2 years, I will have exactly $1220 at the end')" aria-label="Try example: Compound interest">
-                        Compound interest
+                    <button class="example-btn" onclick="setExample('If P, then Q. Q is true. Therefore, P is true')" aria-label="Try example: Affirming consequent">
+                        <strong>Affirming consequent</strong>
+                        <span class="example-note">Classic logical fallacy</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('A car depreciates 15% per year, so after 3 years a $30,000 car is worth $16,500')" aria-label="Try example: Depreciation">
-                        Depreciation
+                    <button class="example-btn" onclick="setExample('If all dogs are animals, and Fido is an animal, then Fido is a dog')" aria-label="Try example: Invalid universal reasoning">
+                        <strong>Universal reasoning</strong>
+                        <span class="example-note">Invalid syllogism</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If I save $100 per month for 10 years at 5% annual interest, I will have saved $12,000 total')" aria-label="Try example: Savings calculation">
-                        Savings calculation
+                    <button class="example-btn" onclick="setExample('If x > 5, then x < 3')" aria-label="Try example: Contradiction">
+                        <strong>Contradiction</strong>
+                        <span class="example-note">Impossible implication</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('A store has a 20% off sale, then takes an additional 30% off the sale price, which equals 50% off the original price')" aria-label="Try example: Stacked discounts">
-                        Stacked discounts
+                    <button class="example-btn" onclick="setExample('If all humans are mortal, and Socrates is human, then Socrates is mortal')" aria-label="Try example: Valid syllogism">
+                        <strong>Valid syllogism</strong>
+                        <span class="example-note">Should verify correctly</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If I buy 3 items at $19.99 each and pay with a $100 bill, I will get back $40.03 in change')" aria-label="Try example: Change calculation">
-                        Change calculation
+                    <button class="example-btn" onclick="setExample('If it rains, then the ground is wet. The ground is wet. Therefore, it rained')" aria-label="Try example: Real-world fallacy">
+                        <strong>Real-world fallacy</strong>
+                        <span class="example-note">Affirming consequent</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('A 15% tip on a $47.82 bill is $7.00')" aria-label="Try example: Tip calculation">
-                        Tip calculation
+                    <button class="example-btn" onclick="setExample('If x > 10, then x > 5. If x > 5, then x > 0. Therefore, if x > 10, then x > 0')" aria-label="Try example: Transitive implication">
+                        <strong>Transitive chain</strong>
+                        <span class="example-note">Valid logical chain</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If gas costs $3.45 per gallon and I need to drive 285 miles in a car that gets 32 mpg, I will spend less than $30 on gas')" aria-label="Try example: Trip cost">
-                        Trip cost
+                    <button class="example-btn" onclick="setExample('If you study hard, you will pass. You passed. Therefore, you studied hard')" aria-label="Try example: Causal fallacy">
+                        <strong>Causal fallacy</strong>
+                        <span class="example-note">Confuses correlation with causation</span>
                     </button>
                 </div>
             </div>
