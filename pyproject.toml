@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-claim-formalization"
+version = "0.1.0"
+description = "Hybrid symbolic-neural verification for natural language claims"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Michael Merritt", email = "michaelgideonmerritt@protonmail.com"}
+]
+keywords = ["llm", "verification", "formal-logic", "symbolic-reasoning", "claim-verification"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "z3-solver>=4.12.0",
+    "python-sat>=0.1.8",
+    "ollama>=0.6.0",
+]
+
+[project.optional-dependencies]
+demo = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+]
+cloud-llms = [
+    "openai>=1.0.0",
+    "anthropic>=0.20.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/michaelgideonmerritt/llm-claim-formalization"
+Repository = "https://github.com/michaelgideonmerritt/llm-claim-formalization"
+Issues = "https://github.com/michaelgideonmerritt/llm-claim-formalization/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Claim Formalization - Demo</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LLM Claim Formalization</h1>
+            <p class="subtitle">Hybrid symbolic-neural verification for natural language claims</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <label for="claim-input">Enter a claim to verify:</label>
+                <textarea id="claim-input" rows="3" placeholder="$100 with 50% off then 20% off is $40"></textarea>
+                <button id="verify-btn" onclick="verifyClaim()">Verify</button>
+            </div>
+
+            <div id="result" class="result hidden"></div>
+
+            <div class="examples">
+                <h3>Example Claims</h3>
+                <div class="example-grid">
+                    <button class="example-btn" onclick="setExample('$100 with 50% off is $50')">
+                        Simple discount
+                    </button>
+                    <button class="example-btn" onclick="setExample('$100 with 50% off then 20% off')">
+                        Compound discount
+                    </button>
+                    <button class="example-btn" onclick="setExample('120 miles at 25 mpg is less than 4 gallons')">
+                        Rate problem
+                    </button>
+                    <button class="example-btn" onclick="setExample('A price increases by 100%')">
+                        Insufficient info
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>
+                <a href="https://github.com/michaelgideonmerritt/llm-claim-formalization" target="_blank">GitHub</a> •
+                MIT License •
+                Runs locally with LFM 2.5
+            </p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
