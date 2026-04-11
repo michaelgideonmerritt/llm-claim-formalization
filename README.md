@@ -129,7 +129,6 @@ This enables a feedback loop: input → insufficient_info → clarification → 
 ### Backends
 
 - **Z3 Backend** - Symbolic SMT solver for formal proofs
-- **SAT Backend** - Boolean satisfiability solver
 - **Ollama Backend** - Local LLM (LFM 2.5) for semantic reasoning
 
 ## Examples
@@ -197,7 +196,6 @@ llm-claim-formalization/
 
 ### Core
 - `z3-solver>=4.12.0` - Symbolic verification
-- `python-sat>=0.1.8` - SAT solver
 - `ollama>=0.6.0` - Local LLM client
 
 ### Optional
@@ -252,7 +250,6 @@ See [SUPPORT.md](SUPPORT.md) for details on community expectations.
 
 Built with:
 - [Z3 Theorem Prover](https://github.com/Z3Prover/z3) from Microsoft Research
-- [PySAT](https://pysathq.github.io/) - Python SAT solvers
 - [Ollama](https://ollama.ai/) - Local LLM runtime
 - [LFM 2.5](https://huggingface.co/FreedomIntelligence/LFM-2.5) - Mathematical reasoning model
 
