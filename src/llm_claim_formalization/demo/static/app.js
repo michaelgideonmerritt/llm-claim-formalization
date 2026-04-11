@@ -43,27 +43,49 @@ function displayResult(data) {
     let title = '';
     let content = '';
 
-    if (data.status === 'verified') {
-        className += 'verified';
-        icon = '✓';
-        title = 'Verified';
+    if (data.status === 'verified' || data.status === 'unverified') {
+        const comparison = data.comparison;
+
+        if (comparison.verdict === 'LLM_ERROR_CAUGHT') {
+            className += 'critical';
+            icon = '🚨';
+            title = 'Critical: LLM Error Caught';
+        } else if (comparison.verdict === 'LLM_OVERLY_CAUTIOUS') {
+            className += 'warning';
+            icon = '⚠️';
+            title = 'Warning: LLM Overly Cautious';
+        } else if (comparison.verdict === 'LLM_CORRECT') {
+            className += 'verified';
+            icon = '✅';
+            title = 'Verified: LLM Correct';
+        } else {
+            className += 'verified';
+            icon = '✅';
+            title = 'Both Agree Invalid';
+        }
+
+        const llmIcon = comparison.llm_only === 'VALID' ? '✓' : '✗';
+        const verifierIcon = comparison.llm_plus_verifier === 'VALID' ? '✓' : '✗';
+
         content = `
-            <p><strong>Route:</strong> ${data.route}</p>
-            ${data.equation ? `<p><strong>Equation:</strong> ${data.equation}</p>` : ''}
-            <p><strong>Confidence:</strong> ${(data.confidence * 100).toFixed(1)}%</p>
-            <div class="result-details">
-                Execution time: ${data.execution_time_ms}ms
+            <div class="comparison-grid">
+                <div class="comparison-box llm-only">
+                    <h4>LLM Only (phi4-mini)</h4>
+                    <p class="comparison-result">${llmIcon} ${comparison.llm_only}</p>
+                    <p class="comparison-label">Probabilistic reasoning</p>
+                </div>
+                <div class="comparison-box verifier">
+                    <h4>LLM + Verifier</h4>
+                    <p class="comparison-result">${verifierIcon} ${comparison.llm_plus_verifier}</p>
+                    <p class="comparison-label">Formal verification</p>
+                </div>
             </div>
-        `;
-    } else if (data.status === 'unverified') {
-        className += 'unverified';
-        icon = '✗';
-        title = 'Unverified';
-        content = `
-            <p>The claim could not be verified.</p>
-            <p><strong>Route:</strong> ${data.route}</p>
+            <div class="verdict ${comparison.verdict.toLowerCase()}">
+                <strong>Verdict:</strong> ${comparison.verdict_message}
+            </div>
+            ${data.equation ? `<p><strong>Equation:</strong> ${data.equation}</p>` : ''}
             <div class="result-details">
-                Execution time: ${data.execution_time_ms}ms
+                Route: ${data.route} | Execution time: ${data.execution_time_ms}ms
             </div>
         `;
     } else if (data.status === 'insufficient_info') {
