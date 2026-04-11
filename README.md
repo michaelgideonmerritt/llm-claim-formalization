@@ -10,18 +10,29 @@ Most LLMs struggle with precise mathematical reasoning. They might tell you "$10
 
 ## 5-Minute Quickstart
 
-```bash
-# Install with demo interface
-pip install -e ".[demo]"
+**For everyone (recommended):**
 
-# Start Ollama and pull LFM 2.5
+```bash
+# 1. Clone the repository
+git clone https://github.com/michaelgideonmerritt/llm-claim-formalization.git
+cd llm-claim-formalization
+
+# 2. Run the install script (handles python/python3 automatically)
+./install.sh
+
+# 3. Pull the LLM model
 ollama pull lfm2.5-thinking-128k
 
-# Run the interactive demo
-python -m llm_claim_formalization.demo
+# 4. Run the demo
+./run-demo.sh
 ```
 
 The demo will auto-open in your browser at `http://localhost:8000`.
+
+**Or try the quickstart example:**
+```bash
+./run-example.sh
+```
 
 ## Installation
 
