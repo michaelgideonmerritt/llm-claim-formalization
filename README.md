@@ -12,6 +12,8 @@ That idea was simple: LLMs (especially small, local ones) shouldn't have to "gue
 
 ## 5-Minute Quickstart
 
+**Prerequisites:** Install [Ollama](https://ollama.com/download) first if you don't have it.
+
 **For everyone (recommended):**
 
 ```bash
@@ -201,9 +203,12 @@ llm-claim-formalization/
 
 ## Requirements
 
-- Python 3.10+
-- [Ollama](https://ollama.ai/) (for LLM backend)
-- LFM 2.5 model: `ollama pull lfm2.5-thinking-128k`
+- **Python 3.10+**
+- **[Ollama](https://ollama.com/download)** - Download and install from [ollama.com/download](https://ollama.com/download)
+  - macOS: `brew install ollama` or download the app
+  - Linux: `curl -fsSL https://ollama.com/install.sh | sh`
+  - Windows: Download from [ollama.com/download](https://ollama.com/download)
+- **LFM 2.5 model**: After installing Ollama, run `ollama pull lfm2.5-thinking-128k`
 
 ## Dependencies
 
