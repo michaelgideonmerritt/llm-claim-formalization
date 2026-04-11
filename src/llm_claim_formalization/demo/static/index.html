@@ -19,7 +19,7 @@
                 <textarea
                     id="claim-input"
                     rows="3"
-                    placeholder="$100 with 50% off then 20% off is $40"
+                    placeholder="If a product costs $100 and I apply a 50% discount followed by another 20% discount, the final price is $40"
                     aria-label="Claim input"
                     aria-describedby="claim-instructions"></textarea>
                 <span id="claim-instructions" class="visually-hidden">Enter a mathematical claim in natural language to verify its correctness</span>
@@ -31,17 +31,17 @@
             <div class="examples">
                 <h3>Example Claims</h3>
                 <div class="example-grid" role="group" aria-label="Example claims">
-                    <button class="example-btn" onclick="setExample('$100 with 50% off is $50')" aria-label="Try example: Simple discount">
-                        Simple discount
+                    <button class="example-btn" onclick="setExample('If a product costs $100 and I apply a 50% discount followed by another 20% discount, the final price is $40')" aria-label="Try example: Compound discounts">
+                        Compound discounts
                     </button>
-                    <button class="example-btn" onclick="setExample('$100 with 50% off then 20% off')" aria-label="Try example: Compound discount">
-                        Compound discount
+                    <button class="example-btn" onclick="setExample('A price that increases by 25% then decreases by 25% returns to the original price')" aria-label="Try example: Percentage paradox">
+                        Percentage paradox
                     </button>
-                    <button class="example-btn" onclick="setExample('120 miles at 25 mpg is less than 4 gallons')" aria-label="Try example: Rate problem">
-                        Rate problem
+                    <button class="example-btn" onclick="setExample('If I drive 120 miles and my car gets 25 miles per gallon, I will use less than 4 gallons of gas')" aria-label="Try example: Rate calculation">
+                        Rate calculation
                     </button>
-                    <button class="example-btn" onclick="setExample('A price increases by 100%')" aria-label="Try example: Insufficient info">
-                        Insufficient info
+                    <button class="example-btn" onclick="setExample('A store offers 30% off everything, so buying a $50 item saves me $30')" aria-label="Try example: Common mistake">
+                        Common mistake
                     </button>
                 </div>
             </div>
