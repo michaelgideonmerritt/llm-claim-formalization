@@ -6,12 +6,28 @@ import socket
 
 def find_available_port(start_port=8000, max_attempts=100):
     for port in range(start_port, start_port + max_attempts):
+        ipv4_available = False
+        ipv6_available = False
+
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(("", port))
-                return port
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+                s.bind(("0.0.0.0", port))
+                ipv4_available = True
         except OSError:
-            continue
+            pass
+
+        try:
+            with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+                s.bind(("::", port))
+                ipv6_available = True
+        except OSError:
+            pass
+
+        if ipv4_available and ipv6_available:
+            return port
+
     raise RuntimeError(f"No available ports found in range {start_port}-{start_port + max_attempts}")
 
 def open_browser(port):
