@@ -68,6 +68,7 @@ function displayResult(data) {
         const verifierIcon = comparison.llm_plus_verifier === 'VALID' ? '✓' : '✗';
 
         content = `
+            <h4 style="margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.125rem; font-weight: 600; color: #1d1d1f;">⚖️ Compare LLM vs Verifier</h4>
             <div class="comparison-grid">
                 <div class="comparison-box llm-only">
                     <h4>LLM Only (phi4-mini)</h4>
