@@ -4,9 +4,11 @@
 
 A Python library that extracts, formalizes, and verifies mathematical claims from natural language using a combination of symbolic reasoning (Z3, SAT solvers) and local LLMs.
 
-## Why This Exists
+## "I found an idea." — Ainsley Merritt, age 4
 
-Most LLMs struggle with precise mathematical reasoning. They might tell you "$100 with 50% off then 20% off equals $60" when the correct answer is $40. This library bridges the gap between natural language understanding and formal mathematical verification.
+As my daughter Ainsley likes to say, I found an idea.
+
+That idea was simple: LLMs (especially small, local ones) shouldn't have to "guess" at logic. This library provides a layer of formal rigor, turning fuzzy natural language into deterministic symbolic logic.
 
 ## 5-Minute Quickstart
 
