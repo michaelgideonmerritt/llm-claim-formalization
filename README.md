@@ -261,10 +261,28 @@ See [SUPPORT.md](SUPPORT.md) for details on community expectations.
 
 ## Acknowledgments
 
-Built with:
-- [Z3 Theorem Prover](https://github.com/Z3Prover/z3) from Microsoft Research
-- [Ollama](https://ollama.ai/) - Local LLM runtime
-- [LFM 2.5](https://huggingface.co/FreedomIntelligence/LFM-2.5) - Mathematical reasoning model
+This project is a bridge built upon the shoulders of giants. LLM Claim Formalization would not be possible without the groundbreaking research, engineering, and commitment to both open-source and accessible AI from the following organizations:
+
+### LLM Technology
+
+- **Anthropic**: For the nuanced reasoning of Claude Opus 4.5.
+- **OpenAI**: For the industry-defining capabilities of GPT 5.3 and the foundational work in gpt-oss-20b.
+- **Google**: For the expansive multi-modal power of Gemini and the highly efficient, accessible Gemma 4.
+- **Meta**: For the incredible gift to the open-source community that is Llama 3.2.
+- **Microsoft**: For proving that "small is powerful" with the Phi 4 series.
+- **MIT**: For the specialized mathematical reasoning capabilities of lfm2.5-thinking.
+
+### Open Source Tools
+
+- **[Z3 Theorem Prover](https://github.com/Z3Prover/z3)** - Microsoft Research's SMT solver
+- **[PySAT](https://pysathq.github.io/)** - Alexey Ignatiev, Antonio Morgado, and Joao Marques-Silva (Monash University)
+- **[Ollama](https://ollama.ai/)** - Jeffrey Morgan and Michael Chiang for local LLM runtime
+- **[FastAPI](https://fastapi.tiangolo.com/)** - Sebastián Ramírez (@tiangolo)
+- **[Pydantic](https://pydantic.dev/)** - Samuel Colvin and the Pydantic team
+- **[Uvicorn](https://uvicorn.dev/)** - Tom Christie and Encode
+- **[pytest](https://pytest.org/)** - Holger Krekel and the pytest-dev community
+
+To the researchers, engineers, and support staff at these institutions: thank you for your hard work. I am grateful for the privilege of building on top of the tools you have created, whether through paid APIs or open-weight models. You are the reason "found ideas" can become reality.
 
 ## Citation
 
