@@ -8,42 +8,48 @@
 </head>
 <body>
     <div class="container">
-        <header>
+        <header role="banner">
             <h1>LLM Claim Formalization</h1>
             <p class="subtitle">Hybrid symbolic-neural verification for natural language claims</p>
         </header>
 
-        <main>
+        <main role="main">
             <div class="input-section">
                 <label for="claim-input">Enter a claim to verify:</label>
-                <textarea id="claim-input" rows="3" placeholder="$100 with 50% off then 20% off is $40"></textarea>
-                <button id="verify-btn" onclick="verifyClaim()">Verify</button>
+                <textarea
+                    id="claim-input"
+                    rows="3"
+                    placeholder="$100 with 50% off then 20% off is $40"
+                    aria-label="Claim input"
+                    aria-describedby="claim-instructions"></textarea>
+                <span id="claim-instructions" class="visually-hidden">Enter a mathematical claim in natural language to verify its correctness</span>
+                <button id="verify-btn" onclick="verifyClaim()" aria-label="Verify claim">Verify</button>
             </div>
 
-            <div id="result" class="result hidden"></div>
+            <div id="result" class="result hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
             <div class="examples">
                 <h3>Example Claims</h3>
-                <div class="example-grid">
-                    <button class="example-btn" onclick="setExample('$100 with 50% off is $50')">
+                <div class="example-grid" role="group" aria-label="Example claims">
+                    <button class="example-btn" onclick="setExample('$100 with 50% off is $50')" aria-label="Try example: Simple discount">
                         Simple discount
                     </button>
-                    <button class="example-btn" onclick="setExample('$100 with 50% off then 20% off')">
+                    <button class="example-btn" onclick="setExample('$100 with 50% off then 20% off')" aria-label="Try example: Compound discount">
                         Compound discount
                     </button>
-                    <button class="example-btn" onclick="setExample('120 miles at 25 mpg is less than 4 gallons')">
+                    <button class="example-btn" onclick="setExample('120 miles at 25 mpg is less than 4 gallons')" aria-label="Try example: Rate problem">
                         Rate problem
                     </button>
-                    <button class="example-btn" onclick="setExample('A price increases by 100%')">
+                    <button class="example-btn" onclick="setExample('A price increases by 100%')" aria-label="Try example: Insufficient info">
                         Insufficient info
                     </button>
                 </div>
             </div>
         </main>
 
-        <footer>
+        <footer role="contentinfo">
             <p>
-                <a href="https://github.com/michaelgideonmerritt/llm-claim-formalization" target="_blank">GitHub</a> •
+                <a href="https://github.com/michaelgideonmerritt/llm-claim-formalization" target="_blank" rel="noopener noreferrer">GitHub</a> •
                 MIT License •
                 Runs locally with LFM 2.5
             </p>
