@@ -377,3 +377,13 @@ If you use this library in academic work, please cite:
   license = {MIT}
 }
 ```
+
+## Academic Research
+
+This project is accompanied by academic research on hybrid symbolic-neural verification:
+
+**[Catching LLM Logical Errors with Formal Verification: A Hybrid Symbolic-Neural Approach](paper/llm_claim_formalization_workshop.md)**
+
+> Merritt, M. (2026). Workshop paper.
+>
+> This paper demonstrates how combining small LLMs (8B parameters) with formal verification (SAT/FOL/SMT solvers) achieves perfect accuracy on logical reasoning tasks. Preliminary experiments show that an LLM alone achieves 37.5% accuracy, while the same LLM augmented with symbolic verification achieves 100% accuracy, successfully catching common fallacies including affirming the consequent, denying the antecedent, and invalid syllogisms.
