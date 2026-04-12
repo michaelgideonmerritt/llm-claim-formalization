@@ -371,7 +371,7 @@ If you use this library in academic work, please cite:
 ```bibtex
 @software{llm_claim_formalization,
   title = {LLM Claim Formalization},
-  author = {Merritt, Michael},
+  author = {Merritt, Michael G.},
   year = {2026},
   url = {https://github.com/michaelgideonmerritt/llm-claim-formalization},
   license = {MIT}
@@ -384,6 +384,6 @@ This project is accompanied by academic research on hybrid symbolic-neural verif
 
 **[Catching LLM Logical Errors with Formal Verification: A Hybrid Symbolic-Neural Approach](paper/llm_claim_formalization_workshop.md)**
 
-> Merritt, M. (2026). Workshop paper.
+> Merritt, M. G. (2026). Workshop paper.
 >
 > This paper demonstrates how combining small LLMs (8B parameters) with formal verification (SAT/FOL/SMT solvers) achieves perfect accuracy on logical reasoning tasks. Preliminary experiments show that an LLM alone achieves 37.5% accuracy, while the same LLM augmented with symbolic verification achieves 100% accuracy, successfully catching common fallacies including affirming the consequent, denying the antecedent, and invalid syllogisms.
