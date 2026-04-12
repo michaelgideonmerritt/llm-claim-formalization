@@ -1,6 +1,6 @@
 # Catching LLM Logical Errors with Formal Verification: A Hybrid Symbolic-Neural Approach
 
-**Michael Merritt**
+**Michael G. Merritt**
 *Independent Researcher*
 
 ---
