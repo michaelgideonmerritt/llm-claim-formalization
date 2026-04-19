@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verified Question-Answering - Demo</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .mode-selector {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .mode-selector a {
+            margin: 0 1rem;
+            padding: 0.5rem 1.5rem;
+            text-decoration: none;
+            color: #333;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .mode-selector a.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .mode-selector a:hover:not(.active) {
+            border-color: #007bff;
+            color: #007bff;
+        }
+        .feedback-loop {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
+        .feedback-loop h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .attempt {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #dc3545;
+        }
+        .attempt.verified {
+            border-left-color: #28a745;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header role="banner">
+            <h1>🔍 Verified Question-Answering</h1>
+            <p class="subtitle">LLM knowledge + Formal verification + Feedback loop = Deterministic, hallucination-free answers</p>
+        </header>
+
+        <div class="mode-selector">
+            <a href="/">Claim Verification</a>
+            <a href="/static/qa.html" class="active">Question Answering</a>
+        </div>
+
+        <main role="main">
+            <div class="architecture-info" style="margin: 2rem 0; padding: 1.5rem; background: #e7f3ff; border-radius: 8px;">
+                <h3 style="margin-top: 0;">How It Works</h3>
+                <ol style="margin: 0; padding-left: 1.5rem;">
+                    <li><strong>User asks question</strong></li>
+                    <li><strong>Verifier</strong> classifies question type (arithmetic, logic, factual)</li>
+                    <li><strong>LLM</strong> generates answer using training knowledge</li>
+                    <li><strong>Verifier</strong> checks if answer is deterministic and logical</li>
+                    <li><strong>If verified ✅</strong> → Send to user</li>
+                    <li><strong>If rejected ❌</strong> → Send feedback to LLM → Retry</li>
+                    <li><strong>Loop</strong> until verified or max retries</li>
+                </ol>
+            </div>
+
+            <div class="input-section">
+                <label for="question-input">Ask a question:</label>
+                <textarea
+                    id="question-input"
+                    rows="2"
+                    placeholder="What is 2 + 2?"
+                    aria-label="Question input"></textarea>
+                <button id="ask-btn" onclick="askQuestion()" aria-label="Ask question">Ask</button>
+            </div>
+
+            <div id="result" class="result hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+            <div class="examples">
+                <h3>Example Questions</h3>
+                <p class="examples-subtitle">Try different question types to see the feedback loop in action</p>
+                <div class="example-grid" role="group" aria-label="Example questions">
+                    <button class="example-btn" onclick="setQuestion('What is 2 + 2?')">
+                        <strong>Arithmetic</strong>
+                        <span class="example-note">Z3 formal verification</span>
+                    </button>
+                    <button class="example-btn" onclick="setQuestion('What is 10 * 5?')">
+                        <strong>Multiplication</strong>
+                        <span class="example-note">Formal proof route</span>
+                    </button>
+                    <button class="example-btn" onclick="setQuestion('If I have $100 and spend 50%, how much is left?')">
+                        <strong>Percentage</strong>
+                        <span class="example-note">Structured extraction</span>
+                    </button>
+                    <button class="example-btn" onclick="setQuestion('At what temperature does water boil at sea level?')">
+                        <strong>Factual</strong>
+                        <span class="example-note">Evidence-backed verification</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer role="contentinfo">
+            <p>
+                <a href="https://github.com/michaelgideonmerritt/llm-claim-formalization" target="_blank" rel="noopener noreferrer">GitHub</a> •
+                MIT License •
+                Model: llama3.2:3b
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        function setQuestion(text) {
+            document.getElementById('question-input').value = text;
+            document.getElementById('question-input').focus();
+        }
+
+        async function askQuestion() {
+            const questionInput = document.getElementById('question-input');
+            const resultDiv = document.getElementById('result');
+            const askBtn = document.getElementById('ask-btn');
+
+            const question = questionInput.value.trim();
+            if (!question) {
+                alert('Please enter a question');
+                return;
+            }
+
+            // Disable button and show loading
+            askBtn.disabled = true;
+            askBtn.innerHTML = '<span class="loading-spinner"></span>Asking...';
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<div class="loading-spinner"></div> Generating answer and verifying...';
+
+            try {
+                const response = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                displayResult(result);
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            } finally {
+                askBtn.disabled = false;
+                askBtn.innerHTML = 'Ask';
+            }
+        }
+
+        function displayResult(result) {
+            const resultDiv = document.getElementById('result');
+
+            if (result.error) {
+                resultDiv.innerHTML = `<div class="error"><strong>Error:</strong> ${result.error}</div>`;
+                return;
+            }
+
+            let html = `
+                <div class="result-header ${result.verified ? 'verified' : 'unverified'}">
+                    <span class="status-icon">${result.verified ? '✅' : '❌'}</span>
+                    <span class="status-text">${result.verified ? 'VERIFIED' : 'UNVERIFIED'}</span>
+                </div>
+
+                <div class="result-body">
+                    <div class="result-field">
+                        <strong>Question:</strong>
+                        <div class="field-value">${escapeHtml(result.question)}</div>
+                    </div>
+
+                    <div class="result-field">
+                        <strong>Answer:</strong>
+                        <div class="field-value">${escapeHtml(result.answer)}</div>
+                    </div>
+
+                    <div class="result-field">
+                        <strong>Question Type:</strong>
+                        <code>${result.question_type}</code>
+                    </div>
+
+                    <div class="result-field">
+                        <strong>Attempts:</strong>
+                        <span>${result.attempts}</span>
+                    </div>
+                </div>
+            `;
+
+            // Show rejection history (feedback loop)
+            if (result.rejection_history && result.rejection_history.length > 0) {
+                html += `
+                    <div class="feedback-loop">
+                        <h4>🔄 Feedback Loop History</h4>
+                        <p style="margin: 0.5rem 0; color: #856404;">
+                            The LLM's initial answer was rejected. Here's how it self-corrected:
+                        </p>
+                `;
+
+                result.rejection_history.forEach((attempt, idx) => {
+                    html += `
+                        <div class="attempt">
+                            <strong>Attempt ${attempt.attempt}:</strong>
+                            <div style="margin: 0.5rem 0; padding: 0.5rem; background: #f8f9fa; border-radius: 4px;">
+                                ${escapeHtml(attempt.answer.substring(0, 100))}${attempt.answer.length > 100 ? '...' : ''}
+                            </div>
+                            <div style="color: #dc3545; font-weight: 500;">
+                                ❌ ${attempt.status}
+                            </div>
+                            <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                                <strong>Rejection:</strong> ${escapeHtml(attempt.rejection_reason.substring(0, 150))}...
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+            }
+
+            // Show final verification details
+            if (result.final_verification) {
+                const v = result.final_verification;
+                html += `
+                    <div class="result-field">
+                        <strong>Verification Details:</strong>
+                        <div style="margin-top: 0.5rem; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                            <div><strong>Status:</strong> <code>${v.status}</code></div>
+                            <div><strong>Route:</strong> <code>${v.route}</code></div>
+                            <div><strong>Confidence:</strong> ${v.confidence?.toFixed(2) || 'N/A'}</div>
+                            ${v.message ? `<div><strong>Message:</strong> ${escapeHtml(v.message)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultDiv.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Allow Enter key to submit (with Shift+Enter for new line)
+        document.getElementById('question-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                askQuestion();
+            }
+        });
+    </script>
+</body>
+</html>

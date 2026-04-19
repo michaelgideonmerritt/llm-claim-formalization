@@ -141,13 +141,25 @@ def verify_llm_answer(answer: str, question_type: str) -> dict[str, Any]:
     # For math: extract "2 + 2 = 4" or "2 + 2 is 4" from natural language
     claim = answer
 
-    # Try to extract equation-like patterns
-    # "2 + 2 is 4" → "2 + 2 = 4"
-    claim = re.sub(r'\bis\b', '=', claim, flags=re.IGNORECASE)
-    claim = re.sub(r'\bequals\b', '=', claim, flags=re.IGNORECASE)
+    # Pattern 1: "The answer to X is Y" → "X = Y"
+    match = re.search(r'(?:answer|result)\s+(?:to|is)\s+(.+?)\s+(?:is|equals)\s+(.+?)[\s.]', claim, re.IGNORECASE)
+    if match:
+        claim = f"{match.group(1).strip()} = {match.group(2).strip()}"
+    else:
+        # Pattern 2: Simple "X is Y" or "X equals Y"
+        # But only if X contains math operators
+        match = re.search(r'([\d\s+\-*/().]+)\s+(?:is|equals)\s+([\d\s+\-*/().]+)', claim, re.IGNORECASE)
+        if match:
+            claim = f"{match.group(1).strip()} = {match.group(2).strip()}"
+        else:
+            # Fallback: just substitute is/equals with =
+            claim = re.sub(r'\bis\b', '=', claim, flags=re.IGNORECASE)
+            claim = re.sub(r'\bequals\b', '=', claim, flags=re.IGNORECASE)
+            # Remove sentence starters only if what's left looks like math
+            cleaned = re.sub(r'^(The answer (to|is)|The result is|It is)\s+', '', claim, flags=re.IGNORECASE)
+            if re.search(r'[\d+\-*/=]', cleaned):  # Contains numbers or operators
+                claim = cleaned
 
-    # Remove common sentence starters
-    claim = re.sub(r'^(The answer (to|is)|The result is|It is)\s+', '', claim, flags=re.IGNORECASE)
     claim = claim.strip(' .')
 
     # Verify the extracted claim
