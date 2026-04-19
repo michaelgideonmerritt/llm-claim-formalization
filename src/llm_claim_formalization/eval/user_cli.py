@@ -36,6 +36,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Run each question multiple times to measure consistency and average latency.",
     )
     parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=1,
+        help="Number of parallel workers for concurrent test execution (default: 1 = sequential).",
+    )
+    parser.add_argument(
         "--enforce-thresholds",
         action="store_true",
         help="Exit non-zero if metrics fall below configured thresholds.",
@@ -132,6 +138,7 @@ def main() -> int:
         llm_mode=args.llm_mode,
         threshold_path=args.thresholds,
         iterations=args.iterations,
+        concurrency=args.concurrency,
     )
     _print_summary(report, show_failures=args.show_failures)
 

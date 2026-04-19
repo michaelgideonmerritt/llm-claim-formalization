@@ -73,6 +73,17 @@ _FOL_PATTERN = re.compile(
 )
 _P_VALUE_PATTERN = re.compile(r"\bp\s*(?:=|<|<=)\s*(0(?:\.\d+)?|1(?:\.0+)?)\b", re.I)
 _ALPHA_PATTERN = re.compile(r"\b(?:alpha|α)\s*(?:=|<|<=)\s*(0(?:\.\d+)?|1(?:\.0+)?)\b", re.I)
+_CONVERSATIONAL_PATTERN = re.compile(
+    r"^\s*(?:can\s+you|could\s+you|would\s+you|please|help\s+me|show\s+me|tell\s+me|"
+    r"explain|teach\s+me|how\s+do\s+i|what\s+should\s+i|good\s+morning|good\s+afternoon|"
+    r"good\s+evening|hello|hi|hey|thanks|thank\s+you)\b",
+    re.I,
+)
+_QUESTION_FORM_MATH_PATTERN = re.compile(
+    r"^\s*(?:is|are|was|were|does|do|did|what\s+is|what's)\s+.*?"
+    r"(?:\d+\s*[+\-*/]\s*\d+|[+\-*/]|[<>=]=?)",
+    re.I,
+)
 
 
 def _is_schedule_or_metadata_text(text: str) -> bool:
@@ -87,6 +98,45 @@ def _is_schedule_or_metadata_text(text: str) -> bool:
         return True
 
     return False
+
+
+def _is_conversational_or_help_request(text: str) -> bool:
+    """Detect conversational text or help requests that are not verifiable claims."""
+    return _CONVERSATIONAL_PATTERN.match(text.strip()) is not None
+
+
+def _extract_math_from_question(text: str) -> Optional[str]:
+    """Extract the mathematical expression from a question-form math query.
+
+    Examples:
+        'Is 2 + 2 = 4?' -> '2 + 2 == 4'
+        'What is 10 / 4?' -> '10 / 4'
+        'Is 10 / 4 greater than 2?' -> '10 / 4 > 2'
+    """
+    if not _QUESTION_FORM_MATH_PATTERN.match(text):
+        return None
+
+    stripped = text.strip().rstrip("?").strip()
+
+    # Remove question prefix words
+    for prefix in ["is", "are", "was", "were", "does", "do", "did", "what is", "what's"]:
+        if stripped.lower().startswith(prefix):
+            stripped = stripped[len(prefix):].strip()
+            break
+
+    # Normalize comparison operators
+    stripped = re.sub(r'\bequal to\b', '==', stripped, flags=re.I)
+    stripped = re.sub(r'\bgreater than\b', '>', stripped, flags=re.I)
+    stripped = re.sub(r'\bless than\b', '<', stripped, flags=re.I)
+    stripped = re.sub(r'\bgreater than or equal to\b', '>=', stripped, flags=re.I)
+    stripped = re.sub(r'\bless than or equal to\b', '<=', stripped, flags=re.I)
+    stripped = re.sub(r'\s*=\s*(?!=)', ' == ', stripped)  # single = to ==
+
+    # Check if this looks like a valid expression
+    if _FORMAL_OPERATOR.search(stripped):
+        return stripped.strip()
+
+    return None
 
 
 def looks_like_formal_expression(text: str) -> bool:
@@ -231,6 +281,33 @@ def choose_route(text: str, structured_claim: Optional[Claim]) -> RouteDecision:
             claim_type=classify_claim_type(stripped),
             reason=ReasonCode.non_verification_text,
         )
+
+    if _is_conversational_or_help_request(stripped):
+        return RouteDecision(
+            route=Route.no_claim,
+            claim_type=ClaimType.unknown,
+            reason=ReasonCode.no_verifiable_claim,
+        )
+
+    # Check for question-form math before structured extraction
+    # BUT: skip if this is a statistical claim (has p-value/alpha keywords)
+    has_statistical_keywords = _STATISTICAL_WORDS.search(stripped) or _P_VALUE_PATTERN.search(stripped)
+    if not has_statistical_keywords:
+        math_expression = _extract_math_from_question(stripped)
+        if math_expression is not None:
+            return _build_ir_or_validation_failure(
+                route=Route.formal,
+                claim_type=ClaimType.arithmetic,
+                reason=ReasonCode.formal_expression,
+                ir_builder=lambda: ArithmeticIR(
+                    route=Route.formal,
+                    claim_type=ClaimType.arithmetic,
+                    source_text=stripped,
+                    equation=math_expression,
+                    is_boolean=_looks_boolean_equation(math_expression),
+                    extraction_confidence=None,
+                ),
+            )
 
     if structured_claim is not None:
         if structured_claim.insufficient_info:

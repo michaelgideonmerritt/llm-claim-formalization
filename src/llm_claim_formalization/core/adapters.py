@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Optional
@@ -70,6 +72,36 @@ def _factual_stance_mode() -> str:
     if mode not in {"hybrid", "heuristic", "nli"}:
         return "hybrid"
     return mode
+
+
+def _enable_fast_path() -> bool:
+    """Check if fast path mode is enabled (skip LLM comparison on structured/formal routes)."""
+    return os.getenv("LLM_CF_FAST_PATH", "false").strip().lower() in {"true", "1", "yes"}
+
+
+def _enable_nli_cache() -> bool:
+    """Check if NLI caching is enabled."""
+    return os.getenv("LLM_CF_NLI_CACHE", "true").strip().lower() in {"true", "1", "yes"}
+
+
+def _nli_cache_key(claim: str, evidence: str) -> str:
+    """Generate a cache key for NLI calls."""
+    combined = f"{claim}|||{evidence}"
+    return hashlib.sha256(combined.encode("utf-8")).hexdigest()
+
+
+@lru_cache(maxsize=1024)
+def _cached_nli_call(cache_key: str, claim: str, evidence: str) -> dict[str, Any]:
+    """Cached wrapper for NLI entailment calls."""
+    return verify_entailment_with_ollama(claim, evidence)
+
+
+def _verify_entailment_cached(claim: str, evidence: str) -> dict[str, Any]:
+    """Verify entailment with optional caching."""
+    if _enable_nli_cache():
+        cache_key = _nli_cache_key(claim, evidence)
+        return _cached_nli_call(cache_key, claim, evidence)
+    return verify_entailment_with_ollama(claim, evidence)
 
 
 def _nli_to_stance(label: Optional[str]) -> str:
@@ -145,8 +177,13 @@ class ArithmeticAdapter(DomainAdapter):
         if not isinstance(ir, ArithmeticIR):
             raise TypeError("ArithmeticAdapter expected ArithmeticIR input.")
         z3_result = verify_with_z3(ir.equation)
-        ollama_result = verify_with_ollama(ir.source_text)
-        comparison = self._build_comparison(ollama_result, z3_result)
+
+        # Fast path: skip LLM comparison when enabled (prioritize speed)
+        fast_path = _enable_fast_path()
+        comparison = None
+        if not fast_path:
+            ollama_result = verify_with_ollama(ir.source_text)
+            comparison = self._build_comparison(ollama_result, z3_result)
 
         verified = z3_result.get("verified")
         if verified is True:
@@ -434,7 +471,7 @@ class FactualAdapter(DomainAdapter):
 
             if mode in {"hybrid", "nli"} and _NLI_AVAILABLE:
                 nli_attempted += 1
-                nli_result = verify_entailment_with_ollama(ir.proposition, citation.snippet)
+                nli_result = _verify_entailment_cached(ir.proposition, citation.snippet)
                 if nli_result.get("error"):
                     nli_errors += 1
                     # Disable repeated failing live calls when Ollama/NLI is unavailable.

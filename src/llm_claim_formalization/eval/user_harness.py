@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -361,81 +362,94 @@ def run_user_evaluation(
     llm_mode: str = "mock",
     threshold_path: Optional[Path] = None,
     iterations: int = 1,
+    concurrency: int = 1,
 ) -> UserEvalReport:
     if iterations <= 0:
         raise ValueError("iterations must be >= 1")
+    if concurrency < 1:
+        raise ValueError("concurrency must be >= 1")
 
     cases = load_user_eval_cases(dataset_path)
     thresholds = load_user_thresholds(threshold_path)
     outcomes: list[UserCaseOutcome] = []
 
+    def _run_case(case: UserEvalCase) -> UserCaseOutcome:
+        """Run a single test case with iterations."""
+        run_results: list[verification_module.VerificationResult] = []
+        run_latencies: list[float] = []
+
+        for _ in range(iterations):
+            started = perf_counter()
+            result = verification_module.verify_claim(case.question)
+            elapsed_ms = (perf_counter() - started) * 1000
+            run_results.append(result)
+            run_latencies.append(elapsed_ms)
+
+        final_result = run_results[-1]
+        first = run_results[0]
+        consistency_pass = all(
+            candidate.route == first.route
+            and candidate.status == first.status
+            and candidate.reason == first.reason
+            for candidate in run_results[1:]
+        )
+
+        route_match = final_result.route == case.expected_route
+        status_match = final_result.status == case.expected_status
+        reason_match = case.expected_reason is None or final_result.reason == case.expected_reason
+
+        checks = _build_functionality_checks(case, final_result)
+        functionality_pass = all(checks.values())
+
+        latency_ms = round(mean(run_latencies), 3)
+        latency_pass = None
+        if case.max_latency_ms is not None:
+            latency_pass = latency_ms <= case.max_latency_ms
+
+        passed = (
+            route_match
+            and status_match
+            and reason_match
+            and functionality_pass
+            and consistency_pass
+            and (latency_pass is not False)
+        )
+
+        return UserCaseOutcome(
+            id=case.id,
+            question=case.question,
+            category=case.category,
+            expected_route=case.expected_route,
+            actual_route=final_result.route,
+            expected_status=case.expected_status,
+            actual_status=final_result.status,
+            expected_reason=case.expected_reason,
+            actual_reason=final_result.reason,
+            route_match=route_match,
+            status_match=status_match,
+            reason_match=reason_match,
+            functionality_checks=checks,
+            functionality_pass=functionality_pass,
+            consistency_pass=consistency_pass,
+            latency_ms=latency_ms,
+            latency_sla_ms=case.max_latency_ms,
+            latency_pass=latency_pass,
+            passed=passed,
+            message=final_result.message,
+            criticality=case.criticality,
+        )
+
     with _patched_ollama_mode(llm_mode, cases):
-        for case in cases:
-            run_results: list[verification_module.VerificationResult] = []
-            run_latencies: list[float] = []
-
-            for _ in range(iterations):
-                started = perf_counter()
-                result = verification_module.verify_claim(case.question)
-                elapsed_ms = (perf_counter() - started) * 1000
-                run_results.append(result)
-                run_latencies.append(elapsed_ms)
-
-            final_result = run_results[-1]
-            first = run_results[0]
-            consistency_pass = all(
-                candidate.route == first.route
-                and candidate.status == first.status
-                and candidate.reason == first.reason
-                for candidate in run_results[1:]
-            )
-
-            route_match = final_result.route == case.expected_route
-            status_match = final_result.status == case.expected_status
-            reason_match = case.expected_reason is None or final_result.reason == case.expected_reason
-
-            checks = _build_functionality_checks(case, final_result)
-            functionality_pass = all(checks.values())
-
-            latency_ms = round(mean(run_latencies), 3)
-            latency_pass = None
-            if case.max_latency_ms is not None:
-                latency_pass = latency_ms <= case.max_latency_ms
-
-            passed = (
-                route_match
-                and status_match
-                and reason_match
-                and functionality_pass
-                and consistency_pass
-                and (latency_pass is not False)
-            )
-
-            outcomes.append(
-                UserCaseOutcome(
-                    id=case.id,
-                    question=case.question,
-                    category=case.category,
-                    expected_route=case.expected_route,
-                    actual_route=final_result.route,
-                    expected_status=case.expected_status,
-                    actual_status=final_result.status,
-                    expected_reason=case.expected_reason,
-                    actual_reason=final_result.reason,
-                    route_match=route_match,
-                    status_match=status_match,
-                    reason_match=reason_match,
-                    functionality_checks=checks,
-                    functionality_pass=functionality_pass,
-                    consistency_pass=consistency_pass,
-                    latency_ms=latency_ms,
-                    latency_sla_ms=case.max_latency_ms,
-                    latency_pass=latency_pass,
-                    passed=passed,
-                    message=final_result.message,
-                    criticality=case.criticality,
-                )
-            )
+        if concurrency == 1:
+            # Sequential execution
+            for case in cases:
+                outcomes.append(_run_case(case))
+        else:
+            # Parallel execution
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                futures = {executor.submit(_run_case, case): case for case in cases}
+                for future in as_completed(futures):
+                    outcomes.append(future.result())
 
     metrics = _compute_metrics(outcomes)
     failures = _evaluate_thresholds(metrics, thresholds)
