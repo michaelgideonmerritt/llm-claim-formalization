@@ -10,7 +10,7 @@
     <div class="container">
         <header role="banner">
             <h1>LLM Claim Formalization</h1>
-            <p class="subtitle">Hybrid symbolic-neural verification for natural language claims</p>
+            <p class="subtitle">Routed symbolic-neural verification for arithmetic, logic, statistics, policy, and factual claims</p>
         </header>
 
         <main role="main">
@@ -19,50 +19,54 @@
                 <textarea
                     id="claim-input"
                     rows="3"
-                    placeholder="If a product costs $100 and I apply a 50% discount followed by another 20% discount, the final price is $40"
+                    placeholder="If a product costs $100 and I apply a 50% discount followed by 20% discount, the final price is $40"
                     aria-label="Claim input"
                     aria-describedby="claim-instructions"></textarea>
-                <span id="claim-instructions" class="visually-hidden">Enter a mathematical claim in natural language to verify its correctness</span>
+                <span id="claim-instructions" class="visually-hidden">Enter a claim. The system routes to formal proof, evidence retrieval, or explicit abstention when formal verification is not possible.</span>
                 <button id="verify-btn" onclick="verifyClaim()" aria-label="Verify claim">Verify</button>
             </div>
 
             <div id="result" class="result hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
             <div class="examples">
-                <h3>Example Claims - Where Small LLMs Fail</h3>
-                <p class="examples-subtitle">These examples show logical errors made by an 8b LLM that formal verification catches</p>
+                <h3>Example Claims</h3>
+                <p class="examples-subtitle">Try multiple claim families to see routed adapter behavior</p>
                 <div class="example-grid" role="group" aria-label="Example claims">
-                    <button class="example-btn" onclick="setExample('If P, then Q. Not Q. Therefore, not P')" aria-label="Try example: Modus tollens">
-                        <strong>Modus tollens</strong>
-                        <span class="example-note">LLM confuses with denying antecedent</span>
+                    <button class="example-btn" onclick="setExample('$100 with 50% off then 20% off is $40')" aria-label="Try discounted price claim">
+                        <strong>Discount arithmetic</strong>
+                        <span class="example-note">Structured extraction + formal verification</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If P, then Q. Q is true. Therefore, P is true')" aria-label="Try example: Affirming consequent">
-                        <strong>Affirming consequent</strong>
-                        <span class="example-note">Classic logical fallacy</span>
+                    <button class="example-btn" onclick="setExample('120 miles at 25 miles per gallon is less than 4 gallons')" aria-label="Try rate comparison claim">
+                        <strong>Rate comparison</strong>
+                        <span class="example-note">Structured extraction + formal verification</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If all dogs are animals, and Fido is an animal, then Fido is a dog')" aria-label="Try example: Invalid universal reasoning">
-                        <strong>Universal reasoning</strong>
-                        <span class="example-note">Invalid syllogism</span>
+                    <button class="example-btn" onclick="setExample('x + 5 = 10')" aria-label="Try formal expression">
+                        <strong>Formal expression</strong>
+                        <span class="example-note">Direct formal verification route</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If x > 5, then x < 3')" aria-label="Try example: Contradiction">
-                        <strong>Contradiction</strong>
-                        <span class="example-note">Impossible implication</span>
+                    <button class="example-btn" onclick="setExample('A price increases by 100%')" aria-label="Try insufficient information claim">
+                        <strong>Insufficient info</strong>
+                        <span class="example-note">Clarification prompt route</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If all humans are mortal, and Socrates is human, then Socrates is mortal')" aria-label="Try example: Valid syllogism">
-                        <strong>Valid syllogism</strong>
-                        <span class="example-note">Should verify correctly</span>
+                    <button class="example-btn" onclick="setExample('The result is statistically significant with p=0.03 and alpha=0.05')" aria-label="Try statistical claim">
+                        <strong>Statistical claim</strong>
+                        <span class="example-note">P-value route with formal threshold check</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If it rains, then the ground is wet. The ground is wet. Therefore, it rained')" aria-label="Try example: Real-world fallacy">
-                        <strong>Real-world fallacy</strong>
-                        <span class="example-note">Affirming consequent</span>
+                    <button class="example-btn" onclick="setExample('Smoking increases risk of heart disease')" aria-label="Try factual claim">
+                        <strong>Factual claim</strong>
+                        <span class="example-note">Evidence-backed retrieval with citations</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If x > 10, then x > 5. If x > 5, then x > 0. Therefore, if x > 10, then x > 0')" aria-label="Try example: Transitive implication">
-                        <strong>Transitive chain</strong>
-                        <span class="example-note">Valid logical chain</span>
+                    <button class="example-btn" onclick="setExample('Policy requires two factor authentication for admin access')" aria-label="Try policy claim">
+                        <strong>Policy/rule claim</strong>
+                        <span class="example-note">Cannot-formally-verify route with guidance</span>
                     </button>
-                    <button class="example-btn" onclick="setExample('If you study hard, you will pass. You passed. Therefore, you studied hard')" aria-label="Try example: Causal fallacy">
-                        <strong>Causal fallacy</strong>
-                        <span class="example-note">Confuses correlation with causation</span>
+                    <button class="example-btn" onclick="setExample('If server is up then api responds. server is up. therefore api responds')" aria-label="Try propositional logic claim">
+                        <strong>Propositional logic</strong>
+                        <span class="example-note">Theorem-proving route</span>
+                    </button>
+                    <button class="example-btn" onclick="setExample('The meeting is at 2:30 PM')" aria-label="Try no-claim text">
+                        <strong>No-claim text</strong>
+                        <span class="example-note">Rejected as non-verifiable</span>
                     </button>
                 </div>
             </div>
@@ -72,7 +76,7 @@
             <p>
                 <a href="https://github.com/michaelgideonmerritt/llm-claim-formalization" target="_blank" rel="noopener noreferrer">GitHub</a> •
                 MIT License •
-                Runs locally with LFM 2.5
+                Runs locally with Ollama + Z3
             </p>
         </footer>
     </div>

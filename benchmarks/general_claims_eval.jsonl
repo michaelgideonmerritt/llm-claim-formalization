@@ -1,0 +1,38 @@
+{"id": "A001", "text": "$100 with 50% off then 20% off is $40", "domain": "finance", "expected_route": "structured", "expected_status": "verified", "criticality": "high"}
+{"id": "A002", "text": "$100 with 50% off then 20% off is $60", "domain": "finance", "expected_route": "structured", "expected_status": "unverified", "criticality": "high"}
+{"id": "A003", "text": "$80 with 25% off is $60", "domain": "finance", "expected_route": "structured", "expected_status": "verified", "criticality": "high"}
+{"id": "A004", "text": "$80 with 25% off is $50", "domain": "finance", "expected_route": "structured", "expected_status": "unverified", "criticality": "high"}
+{"id": "A005", "text": "120 miles at 30 miles per gallon is less than 5 gallons", "domain": "operations", "expected_route": "structured", "expected_status": "verified", "criticality": "medium"}
+{"id": "A006", "text": "120 miles at 30 miles per gallon is less than 3 gallons", "domain": "operations", "expected_route": "structured", "expected_status": "unverified", "criticality": "medium"}
+{"id": "A007", "text": "$100 with 50% off then 20% off", "domain": "finance", "expected_route": "structured", "expected_status": "computed", "criticality": "medium"}
+{"id": "A008", "text": "200 miles at 25 miles per gallon", "domain": "operations", "expected_route": "structured", "expected_status": "computed", "criticality": "medium"}
+{"id": "A009", "text": "2 + 2 = 4", "domain": "math", "expected_route": "formal", "expected_status": "verified", "criticality": "high"}
+{"id": "A010", "text": "2 + 2 = 5", "domain": "math", "expected_route": "formal", "expected_status": "unverified", "criticality": "high"}
+{"id": "A011", "text": "10 / 4", "domain": "math", "expected_route": "formal", "expected_status": "computed", "criticality": "medium"}
+{"id": "A012", "text": "8 - 3 > 2", "domain": "math", "expected_route": "formal", "expected_status": "verified", "criticality": "high"}
+{"id": "P001", "text": "If server is up then api responds. server is up. therefore api responds", "domain": "logic", "expected_route": "propositional", "expected_status": "verified", "criticality": "high"}
+{"id": "P002", "text": "If server is up then api responds. server is up. therefore api fails", "domain": "logic", "expected_route": "propositional", "expected_status": "unverified", "criticality": "high"}
+{"id": "P003", "text": "If feature is enabled then users can login. feature is enabled. therefore users can login", "domain": "logic", "expected_route": "propositional", "expected_status": "verified", "criticality": "high"}
+{"id": "P004", "text": "If cache is warm then latency is low. cache is warm. therefore latency is high", "domain": "logic", "expected_route": "propositional", "expected_status": "unverified", "criticality": "high"}
+{"id": "FOL001", "text": "All humans are mortal. socrates is humans. therefore socrates is mortal", "domain": "logic", "expected_route": "fol", "expected_status": "verified", "criticality": "high"}
+{"id": "FOL002", "text": "All mammals are warmblooded. whale is mammals. therefore whale is coldblooded", "domain": "logic", "expected_route": "fol", "expected_status": "unverified", "criticality": "high"}
+{"id": "FOL003", "text": "All birds are animals. robin is birds. therefore robin is animals", "domain": "logic", "expected_route": "fol", "expected_status": "verified", "criticality": "high"}
+{"id": "S001", "text": "The result is statistically significant with p=0.03 and alpha=0.05", "domain": "statistics", "expected_route": "statistical", "expected_status": "verified", "criticality": "high"}
+{"id": "S002", "text": "The result is statistically significant with p=0.2 and alpha=0.05", "domain": "statistics", "expected_route": "statistical", "expected_status": "unverified", "criticality": "high"}
+{"id": "S003", "text": "The result is statistically significant with p=0.02", "domain": "statistics", "expected_route": "statistical", "expected_status": "cannot_formally_verify", "criticality": "medium"}
+{"id": "S004", "text": "The test reports alpha=0.05 for statistical significance", "domain": "statistics", "expected_route": "statistical", "expected_status": "cannot_formally_verify", "criticality": "medium"}
+{"id": "R001", "text": "Policy requires two factor authentication for admin access", "domain": "security", "expected_route": "policy_rule", "expected_status": "cannot_formally_verify", "criticality": "high"}
+{"id": "R002", "text": "The law requires notice within 30 days", "domain": "legal", "expected_route": "policy_rule", "expected_status": "cannot_formally_verify", "criticality": "high"}
+{"id": "R003", "text": "Contract clause shall include indemnification", "domain": "legal", "expected_route": "policy_rule", "expected_status": "cannot_formally_verify", "criticality": "high"}
+{"id": "FC001", "text": "Smoking increases risk of heart disease", "domain": "health", "expected_route": "factual", "expected_status": "evidence_backed", "criticality": "high"}
+{"id": "FC004", "text": "Smoking does not increase risk of heart disease", "domain": "health", "expected_route": "factual", "expected_status": "unverified", "criticality": "high"}
+{"id": "FC002", "text": "Water boils at 100 degrees Celsius at sea level", "domain": "science", "expected_route": "factual", "expected_status": "evidence_backed", "criticality": "high"}
+{"id": "FC003", "text": "Paris is the capital of France", "domain": "geography", "expected_route": "factual", "expected_status": "evidence_backed", "criticality": "high"}
+{"id": "SUB001", "text": "This investment strategy is superior to index funds", "domain": "finance", "expected_route": "subjective", "expected_status": "cannot_formally_verify", "criticality": "medium"}
+{"id": "SUB002", "text": "This restaurant is the best in town", "domain": "lifestyle", "expected_route": "subjective", "expected_status": "cannot_formally_verify", "criticality": "medium"}
+{"id": "I001", "text": "A price increases by 100%", "domain": "finance", "expected_route": "insufficient_info", "expected_status": "insufficient_info", "criticality": "medium"}
+{"id": "I002", "text": "Revenue decreases by 20%", "domain": "analytics", "expected_route": "insufficient_info", "expected_status": "insufficient_info", "criticality": "medium"}
+{"id": "N001", "text": "The meeting is at 2:30 PM", "domain": "productivity", "expected_route": "no_claim", "expected_status": "no_claim", "criticality": "low"}
+{"id": "N002", "text": "Set a reminder for 4:00 PM", "domain": "productivity", "expected_route": "no_claim", "expected_status": "no_claim", "criticality": "low"}
+{"id": "N003", "text": "Please help me understand this concept", "domain": "chat", "expected_route": "no_claim", "expected_status": "no_claim", "criticality": "low"}
+{"id": "N004", "text": "Good morning team", "domain": "chat", "expected_route": "no_claim", "expected_status": "no_claim", "criticality": "low"}

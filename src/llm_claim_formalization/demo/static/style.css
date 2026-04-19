@@ -178,6 +178,45 @@ button:focus {
     font-size: 1.125rem;
 }
 
+.citation-list {
+    margin: 0.75rem 0 0;
+    padding-left: 1.25rem;
+}
+
+.citation-item {
+    margin-bottom: 0.75rem;
+}
+
+.citation-score {
+    color: #6e6e73;
+    font-size: 0.875rem;
+}
+
+.stance {
+    display: inline-block;
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.stance.support {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.stance.contradict {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.stance.neutral {
+    background: #e5e7eb;
+    color: #374151;
+}
+
 .comparison-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -383,4 +422,12 @@ footer a:focus {
     .example-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.verdict.formal_computed,
+.verdict.llm_uncertain,
+.verdict.llm_mismatch {
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    color: #374151;
 }

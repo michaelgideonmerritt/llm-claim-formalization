@@ -1,389 +1,256 @@
 # LLM Claim Formalization
 
-**Hybrid symbolic-neural verification for natural language claims**
+Hybrid symbolic-neural verification for natural-language claims.
 
-A Python library that extracts, formalizes, and verifies mathematical claims from natural language using a combination of symbolic reasoning (Z3, SAT solvers) and local LLMs.
+This project now provides a **self-contained** verification pipeline with explicit routing and status reporting:
 
-## "I found an idea." — Ainsley Merritt, age 4
+- Formal verification where possible (Z3)
+- Structured extraction for common quantitative claims
+- Routed adapters for propositional/FOL/statistical/policy/factual/subjective claims
+- Evidence-backed factual review with local citation retrieval
+- Explicit abstention (`insufficient_info`, `cannot_formally_verify`, `no_claim`) instead of silent failure
 
-As my daughter Ainsley likes to say, I found an idea.
+## What It Verifies Today
 
-That idea was simple: LLMs (especially small, local ones) shouldn't have to "guess" at logic. This library provides a layer of formal rigor, turning fuzzy natural language into deterministic symbolic logic.
+### Formally verified routes
+- Arithmetic/formal expressions (`2 + 2 == 4`, `120 / 25 < 4`)
+- Structured quantitative claims such as:
+  - discounts (`$100 with 50% off then 20% off is $40`)
+  - rate comparisons (`120 miles at 25 miles per gallon is less than 4 gallons`)
+  - simple budget math (`I have $200, spend $85 and $120, still have money left`)
 
-## 5-Minute Quickstart
+### Routed general-use adapters
+- Propositional logic (`if ... then ... therefore ...`) with theorem proving
+- First-order logic (`all ... are ...`) with theorem proving
+- Statistical claims (`p`, `alpha`) with formal threshold checks
+- Policy/rule and subjective claims with explicit `cannot_formally_verify` guidance
+- Factual claims with stance-aware citation retrieval (`support` / `contradict` / `neutral`)
 
-**Prerequisites:** Install [Ollama](https://ollama.com/download) first if you don't have it.
+### Abstention routes
+- `insufficient_info`: missing critical operands (e.g., percentage with no base value)
+- `cannot_formally_verify`: claim detected, but route lacks formal specification or evidence
+- `no_claim`: no verifiable claim detected
 
-**For everyone (recommended):**
+## Production-Oriented Changes
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/michaelgideonmerritt/llm-claim-formalization.git
-cd llm-claim-formalization
-
-# 2. Run the install script (handles python/python3 automatically)
-./install.sh
-
-# 3. Pull the LLM model
-ollama pull lfm2.5-thinking-128k
-
-# 4. Run the demo
-./run-demo.sh
-```
-
-The demo will auto-open in your browser at `http://localhost:8000`.
-
-**Or try the quickstart example:**
-```bash
-./run-example.sh
-```
+- Removed hardcoded dependency on an external local project path.
+- Replaced unsafe `exec` in Z3 backend with a restricted AST parser.
+- Hardened Ollama parsing to avoid false positives from substring matching.
+- Added deterministic routing and typed result payloads.
+- Added strict typed IR per route and schema validation.
+- Added pluggable domain adapters and local evidence retrieval for factual claims.
+- Replaced broken tests with package-native unit/integration/regression suites.
 
 ## Installation
 
-### Core Library Only
-```bash
-pip install llm-claim-formalization
-```
+### Prerequisites
+- Python 3.10+
+- [Ollama](https://ollama.com/download)
+- A local model (default: `lfm2.5-thinking-128k:latest`)
 
-### With Demo Interface
-```bash
-pip install llm-claim-formalization[demo]
-```
+### Setup
 
-### With Cloud LLM Support
-```bash
-pip install llm-claim-formalization[cloud-llms]
-```
-
-### For Development
 ```bash
 git clone https://github.com/michaelgideonmerritt/llm-claim-formalization.git
 cd llm-claim-formalization
-pip install -e ".[dev]"
+./install.sh
 ```
+
+`install.sh` now:
+
+- creates a fresh virtualenv
+- installs project dependencies
+- verifies or installs Ollama (macOS/Linux)
+- starts `ollama serve` if needed
+- pulls the configured model (`LLM_CF_OLLAMA_MODEL`, default `lfm2.5-thinking-128k:latest`)
 
 ## Usage
 
-### As a Library
+### Library API
+
+```python
+from llm_claim_formalization import verify_claim
+
+result = verify_claim("$100 with 50% off then 20% off is $40")
+print(result.status)      # verified
+print(result.route)       # structured
+print(result.equation)    # normalized equation used by solver
+print(result.comparison)  # llm-only vs llm+verifier comparison
+```
+
+### Extraction-only API
 
 ```python
 from llm_claim_formalization import extract_claim
 
-text = "$100 with 50% off then 20% off"
-claim = extract_claim(text)
-
-if claim:
-    if claim.insufficient_info:
-        print(f"Missing: {claim.missing_info}")
-        print(f"Clarification: {claim.suggested_clarification}")
-    else:
-        print(f"Equation: {claim.equation}")
-        print(f"Confidence: {claim.confidence:.2f}")
-else:
-    print("No claim detected")
+claim = extract_claim("A price increases by 100%")
+if claim and claim.insufficient_info:
+    print(claim.missing_info)
+    print(claim.suggested_clarification)
 ```
 
-### Example Output
-
-```
-Input: "$100 with 50% off then 20% off"
-Equation: (100 * 0.5) * 0.8 == 40
-Confidence: 0.92
-```
-
-### With Verification
-
-```python
-from llm_claim_formalization import extract_claim
-from llm_claim_formalization.backends import verify_with_z3, verify_with_ollama
-
-text = "$100 with 50% off is $50"
-claim = extract_claim(text)
-
-if claim and claim.equation:
-    result = verify_with_z3(claim.equation)
-    print(f"Verified: {result['verified']}")
-```
-
-### Running the Demo
+### Demo
 
 ```bash
-# Start the interactive web interface
+./run-demo.sh
+```
+
+`run-demo.sh` re-checks Ollama availability and model presence before launch.
+
+Then open `http://localhost:8000`.
+
+Direct module run still works:
+
+```bash
 python -m llm_claim_formalization.demo
-
-# Or with custom port
-uvicorn llm_claim_formalization.demo.server:app --port 8080
 ```
 
-## Demo Interface
+## Route/Status Contract
 
-![Demo Screenshot](docs/demo-screenshot.png)
+`verify_claim(...)` returns a structured result with:
 
-The demo provides an interactive interface to test claim verification with side-by-side comparison of "LLM Only" vs "LLM + Verifier" results.
+- `route`: `structured | formal | propositional | fol | statistical | policy_rule | factual | subjective | insufficient_info | no_claim`
+- `status`: `verified | unverified | computed | evidence_backed | llm_only | insufficient_info | no_claim | cannot_formally_verify | error`
+- `message`, `confidence`, `equation`, `comparison`, `citations`, and optional clarification fields
+- factual routes may return `unverified` when contradictory evidence dominates
 
-## Troubleshooting
+`computed` means an arithmetic expression was computable but did not include a boolean assertion to prove/refute.
 
-### Ollama Connection Error
+## Security Notes
 
-If you see `ConnectionError` or "Ollama not running":
+- Z3 input is parsed through a restricted AST parser.
+- Function calls, imports, attribute access, and arbitrary code execution payloads are rejected.
+- Unsupported syntax returns structured errors.
 
-```bash
-# Start Ollama service
-ollama serve
-
-# Or on macOS with Homebrew:
-brew services start ollama
-```
-
-### Model Not Found
-
-If you see "model not found" errors:
+## Testing and Quality Gates
 
 ```bash
-# Pull the required model
-ollama pull lfm2.5-thinking-128k
-
-# Verify it's installed
-ollama list
-```
-
-### Port 8000 Already in Use
-
-If port 8000 is already taken:
-
-```bash
-# Use a different port
-uvicorn llm_claim_formalization.demo.server:app --port 8080
-
-# Then open http://localhost:8080
-```
-
-### Demo Won't Open in Browser
-
-- Manually navigate to http://localhost:8000
-- Check if the server is running (you should see `Uvicorn running on http://127.0.0.1:8000`)
-- Check terminal for error messages
-
-### Python Version Issues
-
-This library requires Python 3.10+. Check your version:
-
-```bash
-python --version  # Should be 3.10 or higher
-```
-
-If you have multiple Python versions:
-
-```bash
-python3.10 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install llm-claim-formalization[demo]
-```
-
-### Import Errors
-
-If you see import errors, ensure all dependencies are installed:
-
-```bash
-pip install -e ".[demo]"  # For development
-# or
-pip install llm-claim-formalization[demo]  # For regular use
-```
-
-## Architecture
-
-### 3-Stage Pipeline
-
-1. **Entity Extraction** - Identifies quantities with units ($100, 50%, 25 mpg)
-2. **Semantic Normalization** - Maps operations to canonical forms (discount, multiplication)
-3. **Equation Synthesis** - Compiles formal mathematical expressions
-
-### 5-Route Verification
-
-- **structured** - High-confidence extraction → Z3 symbolic verification
-- **formal** - Already formal math → Direct Z3 proof
-- **llm** - Fallback to LLM reasoning (LFM 2.5)
-- **insufficient_info** - Missing critical information (suggests clarification)
-- **no_claim** - No verifiable claim detected
-
-### Insufficient Info Detection
-
-When information is missing, the system provides:
-
-- **Normalized reason code** - Machine-friendly (`missing_base_value`, `missing_operation_type`)
-- **Suggested clarification** - User-friendly prompt ("What starting value should I apply the 50% discount to?")
-- **Detected values** - What was found in the input
-
-This enables a feedback loop: input → insufficient_info → clarification → corrected input → success.
-
-### Backends
-
-- **Z3 Backend** - Symbolic SMT solver for formal proofs
-- **Ollama Backend** - Local LLM (LFM 2.5) for semantic reasoning
-
-## Examples
-
-See `examples/quickstart.py` for runnable examples:
-
-```bash
-python examples/quickstart.py
-```
-
-### Example Claims
-
-| Input | Status | Result |
-|-------|--------|--------|
-| "$100 with 50% off is $50" | ✓ Verified | `100 * 0.5 == 50` |
-| "$100 with 50% off then 20% off" | ✓ Extracted | `(100 * 0.5) * 0.8 == 40` |
-| "120 miles at 25 mpg is less than 4 gallons" | ✓ Verified | `120 / 25 < 4` |
-| "A price increases by 100%" | ⚠ Insufficient Info | Missing: `missing_base_value` |
-
-## Testing
-
-```bash
-# Run all tests
 pytest
-
-# Run specific test categories
-pytest tests/unit/
-pytest tests/integration/
-pytest tests/regression/
-
-# With coverage
-pytest --cov=src/llm_claim_formalization
+ruff check src tests --no-cache
+mypy src --cache-dir /tmp/mypy-llm-claim-formalization
+llm-cf-eval --llm-mode mock --enforce-thresholds
 ```
 
-## Project Structure
+The benchmark gate uses:
 
-```
-llm-claim-formalization/
-├── src/llm_claim_formalization/
-│   ├── core/
-│   │   └── extraction.py          # 3-stage extraction pipeline
-│   ├── backends/
-│   │   ├── z3_backend.py          # Symbolic verification
-│   │   ├── sat_backend.py         # SAT solver
-│   │   └── ollama_backend.py      # Local LLM
-│   └── demo/
-│       ├── server.py              # FastAPI demo server
-│       └── static/                # HTML/CSS/JS interface
-├── examples/
-│   └── quickstart.py              # Example usage
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── regression/
-└── pyproject.toml
+- `benchmarks/general_claims_eval.jsonl` (cross-domain routed cases)
+- `benchmarks/evidence_corpus.jsonl` (default factual evidence corpus)
+- `benchmarks/thresholds.json` (minimum metric thresholds)
+
+### User-Centric Suite
+
+For real-world user question testing (functionality + accuracy + speed):
+
+```bash
+# Fast deterministic run (CI-friendly)
+llm-cf-user-eval --llm-mode mock --iterations 2 --output-json /tmp/user-suite-mock.json
+
+# Live local-model run
+llm-cf-user-eval \
+  --llm-mode live \
+  --thresholds benchmarks/user_suite_live_thresholds.json \
+  --output-json /tmp/user-suite-live.json
 ```
 
-## Requirements
+Default dataset and thresholds:
 
-- **Python 3.10+**
-- **[Ollama](https://ollama.com/download)** - Download and install from [ollama.com/download](https://ollama.com/download)
-  - macOS: `brew install ollama` or download the app
-  - Linux: `curl -fsSL https://ollama.com/install.sh | sh`
-  - Windows: Download from [ollama.com/download](https://ollama.com/download)
-- **LFM 2.5 model**: After installing Ollama, run `ollama pull lfm2.5-thinking-128k`
+- `benchmarks/user_questions_eval.jsonl`
+- `benchmarks/user_suite_thresholds.json` (target)
+- `benchmarks/user_suite_live_thresholds.json` (live baseline)
 
-## Dependencies
+Reported metrics include:
 
-### Core
-- `z3-solver>=4.12.0` - Symbolic verification
-- `ollama>=0.6.0` - Local LLM client
+- route/status/reason accuracy
+- functionality accuracy (required output fields present)
+- consistency accuracy across repeated runs
+- latency mean/p50/p95/max/min
+- SLA pass-rate (`max_latency_ms` per case)
+- per-category exact-match accuracy
 
-### Optional
-- `fastapi>=0.100.0` - Demo web server
-- `uvicorn>=0.20.0` - ASGI server
-- `openai>=1.0.0` - Cloud LLM support
-- `anthropic>=0.20.0` - Cloud LLM support
+### Eval Harness
 
-## Framework Agnostic
+```bash
+# Run benchmark with deterministic mock LLM labels (CI-safe)
+llm-cf-eval --llm-mode mock --enforce-thresholds
 
-The core library has zero web framework dependencies. Use it with:
+# Run with live Ollama responses
+llm-cf-eval --llm-mode live --output-json /tmp/eval-report.json
+```
 
-- FastAPI (see demo)
-- Flask
-- Django
-- Streamlit
-- Jupyter notebooks
-- CLI tools
-- Any Python application
+This creates a release gate for:
 
-## Design Philosophy
+- overall case accuracy
+- route accuracy
+- status accuracy
+- verified/unverified precision
+- abstention quality (`insufficient_info`/`cannot_formally_verify`/`no_claim`)
+- llm-only verdict accuracy
 
-1. **Batteries Included** - Works immediately after `pip install`
-2. **Local-First** - No API keys required (uses Ollama)
-3. **Zero-Friction Demo** - Clone → Install → Run → Working interface
-4. **Academic Rigor** - Formal verification with symbolic solvers
-5. **Practical Usability** - Clear error messages and suggested clarifications
-6. **Framework Agnostic** - Use with any Python framework or standalone
+### Nightly Live Drift Tracking
+
+A scheduled workflow runs live evaluations and uploads JSON + logs as artifacts:
+
+- Workflow: `.github/workflows/nightly-live-eval.yml`
+- Schedule: daily at `05:30 UTC`
+- Manual trigger: GitHub Actions `workflow_dispatch` with optional `model` input
+- Live thresholds: `benchmarks/live_thresholds.json`
+
+Model selection order in workflow:
+
+1. manual dispatch `model` input
+2. repository variable `LLM_CF_OLLAMA_MODEL`
+3. fallback `llama3.2:3b`
+
+## Configuration
+
+- `LLM_CF_OLLAMA_MODEL`: override default Ollama model (`lfm2.5-thinking-128k:latest`)
+- `LLM_CF_FACTUAL_STANCE_MODE`: factual stance strategy (`hybrid` default, `heuristic`, or `nli`)
+
+## Adapter Plugins
+
+You can override route adapters at runtime:
+
+```python
+from llm_claim_formalization import Route, register_adapter, unregister_adapter
+from llm_claim_formalization.core.adapters import DomainAdapter, AdapterResult
+from llm_claim_formalization.core.ir import ClaimIR, VerificationStatus, ReasonCode
+
+class MyPolicyAdapter(DomainAdapter):
+    route = Route.policy_rule
+    def verify(self, ir: ClaimIR) -> AdapterResult:
+        return AdapterResult(
+            status=VerificationStatus.verified,
+            reason=ReasonCode.policy_rule_claim,
+            message="Custom policy engine result",
+            confidence=1.0,
+        )
+
+register_adapter(Route.policy_rule, MyPolicyAdapter(), overwrite=True)
+# ... run verification ...
+unregister_adapter(Route.policy_rule)  # restore default adapter
+```
+
+### Ollama Helper Script
+
+Use the helper directly when troubleshooting setup:
+
+```bash
+# Ensure Ollama service is running and model is installed
+./scripts/setup-ollama.sh --model lfm2.5-thinking-128k:latest
+
+# Attempt automatic Ollama install if missing (macOS/Linux)
+./scripts/setup-ollama.sh --install --model llama3.2:3b
+
+# Verify model exists without pulling
+./scripts/setup-ollama.sh --no-pull --model lfm2.5-thinking-128k:latest
+```
+
+## Limitations
+
+- Not every natural-language claim is formally verifiable.
+- `evidence_backed` indicates retrieved support snippets, not contradiction proofs.
+- Multi-hop legal/scientific fact-checking still requires stronger retrieval/ranking and source trust policies.
 
 ## License
 
-MIT License - Free for everyone, forever.
-
-See [LICENSE](LICENSE) for full terms.
-
-## Contributing
-
-This project welcomes community contributions. However, please note:
-
-- Bug reports are welcome via GitHub Issues
-- Feature requests will be reviewed but may not receive immediate response
-- Pull requests are appreciated but review times may vary
-- For support, please consult documentation first
-
-See [SUPPORT.md](SUPPORT.md) for details on community expectations.
-
-## Repository
-
-[https://github.com/michaelgideonmerritt/llm-claim-formalization](https://github.com/michaelgideonmerritt/llm-claim-formalization)
-
-## Acknowledgments
-
-This project is a bridge built upon the shoulders of giants. LLM Claim Formalization would not be possible without the groundbreaking research, engineering, and commitment to both open-source and accessible AI from the following organizations:
-
-### LLM Technology
-
-- **Anthropic**: For the nuanced reasoning of Claude Opus 4.5.
-- **OpenAI**: For the industry-defining capabilities of GPT 5.3 and the foundational work in gpt-oss-20b.
-- **Google**: For the expansive multi-modal power of Gemini and the highly efficient, accessible Gemma 4.
-- **Meta**: For the incredible gift to the open-source community that is Llama 3.2.
-- **Microsoft**: For proving that "small is powerful" with the Phi 4 series.
-- **MIT**: For the specialized mathematical reasoning capabilities of lfm2.5-thinking.
-
-### Open Source Tools
-
-- **[Z3 Theorem Prover](https://github.com/Z3Prover/z3)** - Microsoft Research's SMT solver
-- **[PySAT](https://pysathq.github.io/)** - Alexey Ignatiev, Antonio Morgado, and Joao Marques-Silva (Monash University)
-- **[Ollama](https://ollama.ai/)** - Jeffrey Morgan and Michael Chiang for local LLM runtime
-- **[FastAPI](https://fastapi.tiangolo.com/)** - Sebastián Ramírez (@tiangolo)
-- **[Pydantic](https://pydantic.dev/)** - Samuel Colvin and the Pydantic team
-- **[Uvicorn](https://uvicorn.dev/)** - Tom Christie and Encode
-- **[pytest](https://pytest.org/)** - Holger Krekel and the pytest-dev community
-
-To the researchers, engineers, and support staff at these institutions: thank you for your hard work. I am grateful for the privilege of building on top of the tools you have created, whether through paid APIs or open-weight models. You are the reason "found ideas" can become reality.
-
-## Citation
-
-If you use this library in academic work, please cite:
-
-```bibtex
-@software{llm_claim_formalization,
-  title = {LLM Claim Formalization},
-  author = {Merritt, Michael G.},
-  year = {2026},
-  url = {https://github.com/michaelgideonmerritt/llm-claim-formalization},
-  license = {MIT}
-}
-```
-
-## Academic Research
-
-This project is accompanied by academic research on hybrid symbolic-neural verification:
-
-**[Catching LLM Logical Errors with Formal Verification: A Hybrid Symbolic-Neural Approach](paper/llm_claim_formalization_workshop.md)**
-
-> Merritt, M. G. (2026). Workshop paper.
->
-> This paper demonstrates how combining small LLMs (8B parameters) with formal verification (SAT/FOL/SMT solvers) achieves perfect accuracy on logical reasoning tasks. Preliminary experiments show that an LLM alone achieves 37.5% accuracy, while the same LLM augmented with symbolic verification achieves 100% accuracy, successfully catching common fallacies including affirming the consequent, denying the antecedent, and invalid syllogisms.
+MIT

@@ -1,0 +1,29 @@
+{
+  "minimums": {
+    "overall_case_accuracy": 0.75,
+    "route_accuracy": 0.8,
+    "status_accuracy": 0.8,
+    "reason_accuracy": 0.75,
+    "functionality_accuracy": 0.9,
+    "consistency_accuracy": 0.99,
+    "user_success_rate": 0.95,
+    "sla_pass_rate": 0.5,
+    "high_criticality_accuracy": 0.78
+  },
+  "maximums": {
+    "latency_mean_ms": 9000.0,
+    "latency_p95_ms": 22000.0
+  },
+  "per_category_minimums": {
+    "shopping_math": 0.7,
+    "travel_rate": 0.7,
+    "basic_math_question": 0.5,
+    "logic_reasoning": 0.95,
+    "statistics": 0.9,
+    "policy_compliance": 0.95,
+    "factual_common": 0.85,
+    "subjective_decisions": 0.95,
+    "insufficient_information": 0.95,
+    "non_verification_text": 0.7
+  }
+}

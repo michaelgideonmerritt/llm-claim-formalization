@@ -1,0 +1,167 @@
+name: Nightly Live Eval
+
+on:
+  schedule:
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Optional Ollama model override (e.g., llama3.2:3b)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  live-eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      DEFAULT_OLLAMA_MODEL: "llama3.2:3b"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[demo,dev]"
+
+      - name: Resolve Model
+        shell: bash
+        run: |
+          INPUT_MODEL="${{ github.event.inputs.model }}"
+          VAR_MODEL="${{ vars.LLM_CF_OLLAMA_MODEL }}"
+
+          if [[ -n "$INPUT_MODEL" ]]; then
+            MODEL="$INPUT_MODEL"
+          elif [[ -n "$VAR_MODEL" ]]; then
+            MODEL="$VAR_MODEL"
+          else
+            MODEL="$DEFAULT_OLLAMA_MODEL"
+          fi
+
+          echo "OLLAMA_MODEL=$MODEL" >> "$GITHUB_ENV"
+          echo "LLM_CF_OLLAMA_MODEL=$MODEL" >> "$GITHUB_ENV"
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama
+        shell: bash
+        run: |
+          ollama serve >/tmp/ollama.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+              echo "Ollama is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Ollama failed to start"
+          tail -n 200 /tmp/ollama.log || true
+          exit 1
+
+      - name: Pull Model
+        run: |
+          echo "Using model: $OLLAMA_MODEL"
+          ollama pull "$OLLAMA_MODEL"
+
+      - name: Prepare Artifact Paths
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          echo "REPORT_PATH=artifacts/live-eval-${GITHUB_RUN_ID}.json" >> "$GITHUB_ENV"
+          echo "USER_REPORT_PATH=artifacts/user-suite-live-${GITHUB_RUN_ID}.json" >> "$GITHUB_ENV"
+          echo "MODELS_PATH=artifacts/ollama-models-${GITHUB_RUN_ID}.txt" >> "$GITHUB_ENV"
+
+      - name: Run Live Eval
+        run: |
+          llm-cf-eval \
+            --llm-mode live \
+            --thresholds benchmarks/live_thresholds.json \
+            --enforce-thresholds \
+            --output-json "$REPORT_PATH"
+
+      - name: Run User-Centric Live Suite
+        run: |
+          llm-cf-user-eval \
+            --llm-mode live \
+            --thresholds benchmarks/user_suite_live_thresholds.json \
+            --output-json "$USER_REPORT_PATH"
+
+      - name: Capture Installed Models
+        if: always()
+        run: |
+          ollama list > "$MODELS_PATH" || true
+
+      - name: Publish Step Summary
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report_path = Path(os.environ.get("REPORT_PATH", ""))
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+
+          with summary_path.open("a", encoding="utf-8") as summary:
+            summary.write("## Nightly Live Eval\n")
+            summary.write(f"- Model: `{os.environ.get('OLLAMA_MODEL', 'unknown')}`\n")
+            if not report_path.exists():
+              summary.write("- Report: not generated\n")
+              raise SystemExit(0)
+
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+            metrics = payload.get("metrics", {})
+            summary.write(f"- Cases: `{payload.get('total_cases')}`\n")
+            summary.write(f"- Overall Accuracy: `{metrics.get('overall_case_accuracy')}`\n")
+            summary.write(f"- Route Accuracy: `{metrics.get('route_accuracy')}`\n")
+            summary.write(f"- Status Accuracy: `{metrics.get('status_accuracy')}`\n")
+            summary.write(f"- LLM-only Accuracy: `{metrics.get('llm_only_accuracy')}`\n")
+            per_route = metrics.get("per_route_exact_match", {})
+            if per_route:
+              summary.write("\n### Per-route Exact Match\n")
+              for route in sorted(per_route.keys()):
+                summary.write(f"- `{route}`: `{per_route[route]}`\n")
+
+            failures = payload.get("failures", [])
+            if failures:
+              summary.write("\n### Threshold Failures\n")
+              for failure in failures:
+                summary.write(f"- {failure}\n")
+
+            user_report_path = Path(os.environ.get("USER_REPORT_PATH", ""))
+            if user_report_path.exists():
+              user_payload = json.loads(user_report_path.read_text(encoding="utf-8"))
+              user_metrics = user_payload.get("metrics", {})
+              summary.write("\n## User-Centric Suite\n")
+              summary.write(f"- Cases: `{user_payload.get('total_cases')}`\n")
+              summary.write(f"- Overall Accuracy: `{user_metrics.get('overall_case_accuracy')}`\n")
+              summary.write(f"- Functionality Accuracy: `{user_metrics.get('functionality_accuracy')}`\n")
+              summary.write(f"- SLA Pass Rate: `{user_metrics.get('sla_pass_rate')}`\n")
+              summary.write(f"- Latency P95 (ms): `{user_metrics.get('latency_p95_ms')}`\n")
+          PY
+
+      - name: Upload Live Eval Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-eval-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            ${{ env.REPORT_PATH }}
+            ${{ env.USER_REPORT_PATH }}
+            ${{ env.MODELS_PATH }}
+            /tmp/ollama.log

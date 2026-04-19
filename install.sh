@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 echo "🔧 LLM Claim Formalization - Installation Script"
 echo ""
@@ -32,16 +32,21 @@ $PYTHON_CMD -m venv venv
 echo "🔌 Activating virtual environment..."
 source venv/bin/activate
 
-echo "⬇️  Installing dependencies..."
+echo "⬇️  Installing Python dependencies..."
 pip install --upgrade pip -q
-pip install -e ".[demo]"
+pip install -e ".[demo,dev]"
+
+MODEL="${LLM_CF_OLLAMA_MODEL:-lfm2.5-thinking-128k:latest}"
+
+echo ""
+echo "🤖 Verifying Ollama and model setup ($MODEL)..."
+./scripts/setup-ollama.sh --install --model "$MODEL"
 
 echo ""
 echo "✅ Installation complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Make sure Ollama is installed: https://ollama.ai"
-echo "  2. Pull the LFM 2.5 model: ollama pull lfm2.5-thinking-128k"
-echo "  3. Run the demo: ./run-demo.sh"
-echo "  4. Or try the example: ./run-example.sh"
+echo "  1. Run the demo: ./run-demo.sh"
+echo "  2. Or run quickstart: ./run-example.sh"
+echo "  3. Change model anytime: LLM_CF_OLLAMA_MODEL=llama3.2:3b ./run-demo.sh"
 echo ""

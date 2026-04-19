@@ -1,0 +1,22 @@
+{
+  "minimums": {
+    "overall_case_accuracy": 0.95,
+    "route_accuracy": 0.95,
+    "status_accuracy": 0.95,
+    "verified_precision": 0.95,
+    "unverified_precision": 0.95,
+    "abstention_accuracy": 0.95
+  },
+  "per_route_minimums": {
+    "structured": 0.95,
+    "formal": 0.95,
+    "propositional": 0.95,
+    "fol": 0.95,
+    "statistical": 0.95,
+    "policy_rule": 0.95,
+    "factual": 0.95,
+    "subjective": 0.95,
+    "insufficient_info": 0.95,
+    "no_claim": 0.95
+  }
+}

@@ -27,9 +27,15 @@ classifiers = [
 ]
 
 dependencies = [
+    "pydantic>=2.7.0",
     "z3-solver>=4.12.0",
     "ollama>=0.6.0",
 ]
+
+
+[project.scripts]
+llm-cf-eval = "llm_claim_formalization.eval.cli:main"
+llm-cf-user-eval = "llm_claim_formalization.eval.user_cli:main"
 
 [project.optional-dependencies]
 demo = [
@@ -77,3 +83,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+
+[[tool.mypy.overrides]]
+module = ["z3", "ollama"]
+ignore_missing_imports = true

@@ -1,4 +1,36 @@
-from .core.extraction import extract_claim, Claim, Quantity, Operation
+from .core import (
+    AdapterResult,
+    Claim,
+    ClaimType,
+    DomainAdapter,
+    Operation,
+    Quantity,
+    ReasonCode,
+    Route,
+    VerificationResult,
+    VerificationStatus,
+    extract_claim,
+    list_registered_adapters,
+    register_adapter,
+    unregister_adapter,
+    verify_claim,
+)
 
 __version__ = "0.1.0"
-__all__ = ["extract_claim", "Claim", "Quantity", "Operation"]
+__all__ = [
+    "Claim",
+    "AdapterResult",
+    "ClaimType",
+    "DomainAdapter",
+    "Operation",
+    "Quantity",
+    "ReasonCode",
+    "Route",
+    "VerificationResult",
+    "VerificationStatus",
+    "extract_claim",
+    "list_registered_adapters",
+    "register_adapter",
+    "unregister_adapter",
+    "verify_claim",
+]
