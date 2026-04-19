@@ -66,6 +66,41 @@ cd llm-claim-formalization
 
 ## Usage
 
+### Verified Question-Answering (NEW!)
+
+The **verified QA interface** combines LLM knowledge with formal verification in a feedback loop:
+
+1. User asks question
+2. **Verifier**: Classifies question type (routing)
+3. **LLM**: Generates answer using vast training knowledge
+4. **Verifier**: Checks if answer is deterministic and logical
+   - ✅ YES → Send to user
+   - ❌ NO → Send rejection reason back to LLM
+5. **LLM**: Fixes answer and retries
+6. Loop until verified or max retries
+
+This provides **deterministic, hallucination-free answers** with the full knowledge of the LLM.
+
+```bash
+# Interactive verified QA
+./run-verified-qa.sh
+
+# Demo showing feedback loop
+python3 demo_verified_qa.py
+```
+
+**Python API:**
+
+```python
+from llm_claim_formalization.verified_qa import ask_verified_question
+
+result = ask_verified_question("What is 2 + 2?")
+print(result.answer)           # "2 + 2 = 4"
+print(result.verified)         # True
+print(result.attempts)         # Number of LLM attempts
+print(result.rejection_history)  # Shows feedback loop iterations
+```
+
 ### Library API
 
 ```python
