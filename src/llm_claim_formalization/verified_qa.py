@@ -135,17 +135,32 @@ def verify_llm_answer(answer: str, question_type: str) -> dict[str, Any]:
         - rejection_reason: Why answer was rejected (if verified=False)
         - details: Full verification result
     """
-    # Verify the answer as a claim
-    result = verify_claim(answer)
+    import re
+
+    # Extract verifiable claim from answer
+    # For math: extract "2 + 2 = 4" or "2 + 2 is 4" from natural language
+    claim = answer
+
+    # Try to extract equation-like patterns
+    # "2 + 2 is 4" → "2 + 2 = 4"
+    claim = re.sub(r'\bis\b', '=', claim, flags=re.IGNORECASE)
+    claim = re.sub(r'\bequals\b', '=', claim, flags=re.IGNORECASE)
+
+    # Remove common sentence starters
+    claim = re.sub(r'^(The answer (to|is)|The result is|It is)\s+', '', claim, flags=re.IGNORECASE)
+    claim = claim.strip(' .')
+
+    # Verify the extracted claim
+    result = verify_claim(claim)
 
     verified = (result.status == VerificationStatus.verified.value)
 
     # Build rejection reason if not verified
     rejection_reason = None
     if not verified:
-        if result.status == VerificationStatus.refuted.value:
+        if result.status == VerificationStatus.unverified.value:
             rejection_reason = (
-                f"Your answer was logically refuted. "
+                f"Your answer was logically refuted or unverified. "
                 f"Status: {result.status}. "
                 f"Message: {result.message}. "
                 f"The claim does not hold under formal verification. "
