@@ -58,6 +58,9 @@ def test_subjective_route_abstains() -> None:
 
 
 def test_factual_route_hybrid_mode_uses_nli_when_available(monkeypatch) -> None:
+    # Clear LRU cache to avoid stale results from previous tests
+    adapters_module._cached_nli_call.cache_clear()
+
     monkeypatch.setenv("LLM_CF_FACTUAL_STANCE_MODE", "hybrid")
     monkeypatch.setattr(adapters_module, "_NLI_AVAILABLE", True)
 
