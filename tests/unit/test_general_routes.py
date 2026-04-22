@@ -1,5 +1,6 @@
 import pytest
 
+import llm_claim_formalization.backends as backends_module
 import llm_claim_formalization.core.adapters as adapters_module
 from llm_claim_formalization import verify_claim
 
@@ -64,11 +65,11 @@ def test_factual_route_hybrid_mode_uses_nli_when_available(monkeypatch) -> None:
     monkeypatch.setenv("LLM_CF_FACTUAL_STANCE_MODE", "hybrid")
     monkeypatch.setattr(adapters_module, "_NLI_AVAILABLE", True)
 
-    def fake_nli(_claim: str, _evidence: str) -> dict:
+    def fake_nli(_claim: str, _evidence: str, _model: str | None = None) -> dict:
         return {"label": "contradiction", "confidence": 0.92, "model": "mock", "raw_response": "contradiction"}
 
-    # Mock _verify_entailment_cached which is what the code actually calls
-    monkeypatch.setattr(adapters_module, "_verify_entailment_cached", fake_nli)
+    # Mock the imported function in adapters module (where it's actually called from)
+    monkeypatch.setattr(adapters_module, "verify_entailment_with_ollama", fake_nli)
     result = verify_claim("Smoking increases risk of heart disease")
 
     assert result.route == "factual"
