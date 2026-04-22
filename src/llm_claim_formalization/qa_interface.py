@@ -25,7 +25,7 @@ from typing import Any
 
 import ollama
 
-from .core.verification import verify_claim, VerificationResult
+from .core.verification import verify_claim
 from .core.ir import VerificationStatus
 
 # Default model for question answering (can override with LLM_CF_QA_MODEL)
@@ -119,8 +119,12 @@ def generate_answer(question: str, model: str = DEFAULT_QA_MODEL) -> str:
             messages=[{"role": "user", "content": prompt}],
             options={"temperature": 0.0},  # Deterministic generation
         )
-        answer = response.get("message", {}).get("content", "").strip()
-        return answer
+        message = response.get("message")
+        if isinstance(message, dict):
+            content = message.get("content")
+            if isinstance(content, str):
+                return content.strip()
+        return ""
     except Exception as exc:
         raise RuntimeError(f"Failed to generate answer with {model}: {exc}") from exc
 
@@ -139,9 +143,9 @@ def verify_answer(answer: str) -> tuple[bool, list[dict[str, Any]]]:
         # No verifiable claims found - accept answer
         return True, []
 
-    verification_details = []
+    verification_details: list[dict[str, Any]] = []
     verified_count = 0
-    refuted_count = 0
+    unverified_count = 0
     uncertain_count = 0
 
     for claim in claims:
@@ -159,15 +163,15 @@ def verify_answer(answer: str) -> tuple[bool, list[dict[str, Any]]]:
         # Count outcomes
         if result.status == VerificationStatus.verified.value:
             verified_count += 1
-        elif result.status == VerificationStatus.refuted.value:
-            refuted_count += 1
+        elif result.status == VerificationStatus.unverified.value:
+            unverified_count += 1
         else:
             # Uncertain (insufficient_info, no_claim, etc.)
             uncertain_count += 1
 
     # Answer is verified if NO claims were refuted
     # (verified claims and uncertain claims are acceptable)
-    verified = (refuted_count == 0)
+    verified = (unverified_count == 0)
 
     return verified, verification_details
 
@@ -200,9 +204,15 @@ def ask_question(question: str, model: str = DEFAULT_QA_MODEL) -> QAResult:
         verified, details = verify_answer(answer)
 
         # Step 4: Count results
-        verified_count = sum(1 for d in details if d["status"] == VerificationStatus.verified.value)
-        refuted_count = sum(1 for d in details if d["status"] == VerificationStatus.refuted.value)
-        uncertain_count = len(details) - verified_count - refuted_count
+        verified_count = 0
+        unverified_count = 0
+        for detail in details:
+            status = detail.get("status")
+            if status == VerificationStatus.verified.value:
+                verified_count += 1
+            elif status == VerificationStatus.unverified.value:
+                unverified_count += 1
+        uncertain_count = len(details) - verified_count - unverified_count
 
         return QAResult(
             question=question,
@@ -210,7 +220,7 @@ def ask_question(question: str, model: str = DEFAULT_QA_MODEL) -> QAResult:
             verified=verified,
             claims_extracted=len(claims),
             claims_verified=verified_count,
-            claims_refuted=refuted_count,
+            claims_refuted=unverified_count,
             claims_uncertain=uncertain_count,
             verification_details=details,
             model=model,
@@ -250,9 +260,9 @@ def interactive_qa(model: str = DEFAULT_QA_MODEL):
 
         Ask a question (or 'quit' to exit):
     """
-    print(f"\n🔍 Verified Question-Answering Interface")
+    print("\n🔍 Verified Question-Answering Interface")
     print(f"Model: {model}")
-    print(f"Type 'quit' to exit\n")
+    print("Type 'quit' to exit\n")
 
     while True:
         try:
@@ -265,7 +275,7 @@ def interactive_qa(model: str = DEFAULT_QA_MODEL):
             if not question:
                 continue
 
-            print(f"\n⏳ Generating answer...")
+            print("\n⏳ Generating answer...")
             result = ask_question(question, model=model)
 
             if result.error:

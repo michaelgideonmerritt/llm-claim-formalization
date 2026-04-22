@@ -1,6 +1,5 @@
 import pytest
 
-import llm_claim_formalization.backends as backends_module
 import llm_claim_formalization.core.adapters as adapters_module
 from llm_claim_formalization import verify_claim
 

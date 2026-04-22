@@ -118,7 +118,12 @@ def generate_llm_answer(
             messages=[{"role": "user", "content": prompt}],
             options={"temperature": 0.0},  # Deterministic
         )
-        return response.get("message", {}).get("content", "").strip()
+        message = response.get("message")
+        if isinstance(message, dict):
+            content = message.get("content")
+            if isinstance(content, str):
+                return content.strip()
+        return ""
     except Exception as exc:
         raise RuntimeError(f"LLM generation failed: {exc}") from exc
 
@@ -186,8 +191,8 @@ def verify_llm_answer(answer: str, question_type: str) -> dict[str, Any]:
             )
         elif result.status == VerificationStatus.no_claim.value:
             rejection_reason = (
-                f"Your answer does not contain a verifiable claim. "
-                f"Please provide a specific, factual answer."
+                "Your answer does not contain a verifiable claim. "
+                "Please provide a specific, factual answer."
             )
         else:
             rejection_reason = (
@@ -240,15 +245,15 @@ def ask_verified_question(
     try:
         # Step 1: Classify question
         classification = classify_question(question)
-        question_type = classification["route"]
+        question_type = str(classification["route"])
 
         # Track rejection history
-        rejection_history = []
+        rejection_history: list[dict[str, Any]] = []
 
         # Feedback loop
-        answer = None
-        verification = None
-        feedback = None
+        answer: str = ""
+        verification: dict[str, Any] = {}
+        feedback: str | None = None
 
         for attempt in range(max_retries):
             # Step 2: LLM generates answer (with feedback if retry)
@@ -352,7 +357,7 @@ def interactive_verified_qa(model: str = DEFAULT_MODEL):
 
             # Show rejection history
             if result.rejection_history:
-                print(f"\n🔄 Rejection History:")
+                print("\n🔄 Rejection History:")
                 for rejection in result.rejection_history:
                     print(f"\n  Attempt {rejection['attempt']}:")
                     print(f"    Answer: {rejection['answer'][:100]}...")
@@ -368,7 +373,7 @@ def interactive_verified_qa(model: str = DEFAULT_MODEL):
             print(f"\n{result.answer}")
 
             # Show verification details
-            print(f"\n🔬 Verification:")
+            print("\n🔬 Verification:")
             print(f"  Status: {result.final_verification.get('status', 'unknown')}")
             print(f"  Route: {result.final_verification.get('route', 'unknown')}")
             print(f"  Confidence: {result.final_verification.get('confidence', 0.0):.2f}")
