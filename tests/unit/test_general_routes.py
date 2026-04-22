@@ -64,11 +64,11 @@ def test_factual_route_hybrid_mode_uses_nli_when_available(monkeypatch) -> None:
     monkeypatch.setenv("LLM_CF_FACTUAL_STANCE_MODE", "hybrid")
     monkeypatch.setattr(adapters_module, "_NLI_AVAILABLE", True)
 
-    def fake_nli(_cache_key: str, _claim: str, _evidence: str) -> dict:
+    def fake_nli(_claim: str, _evidence: str) -> dict:
         return {"label": "contradiction", "confidence": 0.92, "model": "mock", "raw_response": "contradiction"}
 
-    # Mock the cached wrapper directly to ensure it's called
-    monkeypatch.setattr(adapters_module, "_cached_nli_call", fake_nli)
+    # Mock _verify_entailment_cached which is what the code actually calls
+    monkeypatch.setattr(adapters_module, "_verify_entailment_cached", fake_nli)
     result = verify_claim("Smoking increases risk of heart disease")
 
     assert result.route == "factual"
