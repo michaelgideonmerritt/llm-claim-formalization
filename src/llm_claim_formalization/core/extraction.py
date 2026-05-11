@@ -77,6 +77,25 @@ def extract_quantities(text: str) -> list[Quantity]:
             )
         )
 
+    # Compound rate abbreviations: X mph, X mpg, X kph, X fps
+    _RATE_ABBREVS = {
+        "mph": ("miles", "hours"),
+        "mpg": ("miles", "gallons"),
+        "kph": ("kilometers", "hours"),
+        "kmh": ("kilometers", "hours"),
+        "fps": ("feet", "seconds"),
+    }
+    for match in re.finditer(r"(\d+(?:\.\d+)?)\s*(mph|mpg|kph|kmh|fps)\b", text, re.I):
+        num, denom = _RATE_ABBREVS[match.group(2).lower()]
+        quantities.append(
+            Quantity(
+                value=float(match.group(1)),
+                unit=f"rate_{num}_per_{denom}",
+                span_text=match.group(0),
+                context_keywords=_get_nearby_keywords(text, match.span()),
+            )
+        )
+
     # Rates: X miles per gallon, X per Y
     for match in re.finditer(r"(\d+(?:\.\d+)?)\s+([a-zA-Z]+)\s+per\s+([a-zA-Z]+)", text, re.I):
         numerator = match.group(2).lower()
@@ -120,6 +139,10 @@ def extract_operations(text: str, quantities: list[Quantity]) -> list[Operation]
     for match in re.finditer(r"(\d+(?:\.\d+)?)%\s*(off|discount)", text, re.I):
         operations.append(Operation(type="discount_percent", value=float(match.group(1)) / 100))
 
+    # "after a 20% discount" / "after 20% off" — reverse-discount: result price is given, not base
+    for match in re.finditer(r"after\s+(?:a\s+)?(\d+(?:\.\d+)?)%\s*(?:off|discount)", text, re.I):
+        operations.append(Operation(type="reverse_discount", value=float(match.group(1)) / 100))
+
     for match in re.finditer(
         r"(increase|increases|increased|up|rose|grew|higher)\s+(?:by\s+)?(\d+(?:\.\d+)?)%", text, re.I
     ):
@@ -131,6 +154,12 @@ def extract_operations(text: str, quantities: list[Quantity]) -> list[Operation]
         re.I,
     ):
         operations.append(Operation(type="relative_decrease", value=float(match.group(2)) / 100))
+
+    # "X% of Y" — percentage-of multiplication: treat as percent_of so synthesizer can handle it
+    for match in re.finditer(r"(\d+(?:\.\d+)?)%\s+of\s+(\d+(?:\.\d+)?)", text, re.I):
+        operations.append(
+            Operation(type="percent_of", value=float(match.group(1)) / 100, unit=str(match.group(2)))
+        )
 
     for quantity in quantities:
         if quantity.unit.startswith("rate_"):
@@ -164,7 +193,8 @@ def extract_operations(text: str, quantities: list[Quantity]) -> list[Operation]
             continue
 
         if any(keyword in before for keyword in earning_keywords):
-            operations.append(Operation(type="add", value=quantity.value, unit="dollars"))
+            # Mark as earn (add), but do NOT treat this as a base — it's income, not starting balance
+            operations.append(Operation(type="earn", value=quantity.value, unit="dollars"))
 
     return operations
 
@@ -202,45 +232,102 @@ def synthesize_equation(
 
                 return expr, 0.78, used_quantities
 
+    # Percent-of: "X% of Y equals Z" → Y * (X/100) == Z
+    percent_of_ops = [op for op in operations if op.type == "percent_of" and op.value is not None]
+    if percent_of_ops:
+        op = percent_of_ops[0]
+        base_val = float(op.unit)  # stored in unit field as string of the base number
+        expr = f"{base_val} * {op.value}"
+        for q in quantities:
+            used_quantities.append(q)
+        claimed_val = _find_claimed_numeric_value(text, exclude_values={base_val, op.value * 100})
+        if claimed_val is not None:
+            return f"{expr} == {claimed_val}", 0.92, used_quantities
+        return expr, 0.84, used_quantities
+
+    # Reverse-discount: "costs $X after Y% discount — was original price $Z?"
+    # Pattern: result_price and a reverse_discount op → base * (1 - discount) == result
+    reverse_discount_ops = [op for op in operations if op.type == "reverse_discount" and op.value is not None]
+    if reverse_discount_ops:
+        rdop = reverse_discount_ops[0]
+        dollar_quantities = [q for q in quantities if q.unit == "dollars"]
+        if len(dollar_quantities) >= 1:
+            # The first dollar amount mentioned is the result price (costs X after discount)
+            result_price = dollar_quantities[0]
+            used_quantities.append(result_price)
+            for q in quantities:
+                if q.unit == "percent":
+                    used_quantities.append(q)
+            expr = f"{{base}} * (1 - {rdop.value}) == {result_price.value}"
+            # If a second dollar amount is claimed as the original price, bind it
+            claimed_base = dollar_quantities[1] if len(dollar_quantities) >= 2 else None
+            if claimed_base:
+                used_quantities.append(claimed_base)
+                return f"{claimed_base.value} * (1 - {rdop.value}) == {result_price.value}", 0.90, used_quantities
+            return f"{result_price.value} / (1 - {rdop.value})", 0.82, used_quantities
+
     # Budget arithmetic: base +/- transactions.
-    subtract_ops = [operation for operation in operations if operation.type == "subtract" and operation.value is not None]
-    add_ops = [operation for operation in operations if operation.type == "add" and operation.value is not None]
-    if (subtract_ops or add_ops) and any(quantity.unit == "dollars" for quantity in quantities):
-        base_quantities = _find_base_money_quantities(text, quantities)
-        if base_quantities:
-            base = base_quantities[0]
-            used_quantities.append(base)
+    # earn ops: income amounts — used as starting base, NOT added on top of base
+    subtract_ops = [op for op in operations if op.type == "subtract" and op.value is not None]
+    earn_ops = [op for op in operations if op.type == "earn" and op.value is not None]
+    add_ops = [op for op in operations if op.type == "add" and op.value is not None]
 
-            parts = [str(base.value)]
-            for operation in add_ops:
-                parts.append(f"+ {operation.value}")
-            for operation in subtract_ops:
-                parts.append(f"- {operation.value}")
-
-            for quantity in quantities:
-                if quantity.unit == "dollars" and quantity != base:
-                    used_quantities.append(quantity)
-
+    if (subtract_ops or earn_ops or add_ops) and any(q.unit == "dollars" for q in quantities):
+        if earn_ops and not subtract_ops and not add_ops:
+            # Pure earn with no spending — not a budget claim
+            pass
+        elif earn_ops:
+            # "I earn X and spend Y" — earn is the base, spending is subtracted from it
+            earn_base_val = sum(op.value for op in earn_ops)  # type: ignore[misc]
+            parts = [str(earn_base_val)]
+            for op in subtract_ops:
+                parts.append(f"- {op.value}")
+            for op in add_ops:
+                parts.append(f"+ {op.value}")
+            for q in quantities:
+                if q.unit == "dollars":
+                    used_quantities.append(q)
             expr = " ".join(parts)
-
             if any(word in text_lower for word in ["still have", "money left", "remaining", "left over"]):
                 return f"{expr} > 0", 0.90, used_quantities
-
             if any(word in text_lower for word in ["broke", "overdraft", "below zero", "negative"]):
                 return f"{expr} < 0", 0.90, used_quantities
-
-            claimed = _find_claimed_value_for_unit(text, quantities, "dollars", skip=base)
-            if claimed:
-                used_quantities.append(claimed)
-                return f"{expr} == {claimed.value}", 0.88, used_quantities
-
             return expr, 0.82, used_quantities
+        else:
+            base_quantities = _find_base_money_quantities(text, quantities)
+            if base_quantities:
+                base = base_quantities[0]
+                used_quantities.append(base)
+
+                parts = [str(base.value)]
+                for op in add_ops:
+                    parts.append(f"+ {op.value}")
+                for op in subtract_ops:
+                    parts.append(f"- {op.value}")
+
+                for q in quantities:
+                    if q.unit == "dollars" and q != base:
+                        used_quantities.append(q)
+
+                expr = " ".join(parts)
+
+                if any(word in text_lower for word in ["still have", "money left", "remaining", "left over"]):
+                    return f"{expr} > 0", 0.90, used_quantities
+
+                if any(word in text_lower for word in ["broke", "overdraft", "below zero", "negative"]):
+                    return f"{expr} < 0", 0.90, used_quantities
+
+                claimed = _find_claimed_value_for_unit(text, quantities, "dollars", skip=base)
+                if claimed:
+                    used_quantities.append(claimed)
+                    return f"{expr} == {claimed.value}", 0.88, used_quantities
+
+                return expr, 0.82, used_quantities
 
     # Percentage transformations (discount/increase/decrease).
     percent_ops = [
-        operation
-        for operation in operations
-        if operation.type in {"discount_percent", "relative_increase", "relative_decrease"} and operation.value is not None
+        op for op in operations
+        if op.type in {"discount_percent", "relative_increase", "relative_decrease"} and op.value is not None
     ]
     if percent_ops:
         percent_base = _select_percentage_base(quantities)
@@ -248,15 +335,15 @@ def synthesize_equation(
             used_quantities.append(percent_base)
 
             factors: list[str] = []
-            for operation in percent_ops:
-                if operation.type in {"discount_percent", "relative_decrease"}:
-                    factors.append(f"* (1 - {operation.value})")
+            for op in percent_ops:
+                if op.type in {"discount_percent", "relative_decrease"}:
+                    factors.append(f"* (1 - {op.value})")
                 else:
-                    factors.append(f"* (1 + {operation.value})")
+                    factors.append(f"* (1 + {op.value})")
 
-            for quantity in quantities:
-                if quantity.unit == "percent":
-                    used_quantities.append(quantity)
+            for q in quantities:
+                if q.unit == "percent":
+                    used_quantities.append(q)
 
             expr = f"{percent_base.value}{''.join(factors)}"
             claimed = _find_claimed_value_for_unit(text, quantities, percent_base.unit, skip=percent_base)
@@ -276,9 +363,9 @@ def extract_claim(text: str) -> Optional[Claim]:
     Returns None if no verifiable structured claim is detected.
     """
     quantities = extract_quantities(text)
+    operations = extract_operations(text, quantities)
 
     if quantities:
-        operations = extract_operations(text, quantities)
         is_insufficient, missing_info, suggested = _detect_insufficient_info(text, quantities, operations)
         if is_insufficient:
             return Claim(
@@ -295,10 +382,11 @@ def extract_claim(text: str) -> Optional[Claim]:
                 suggested_clarification=suggested,
             )
 
-    if not quantities or len(quantities) < 2:
+    # percent_of carries its own base value inside the operation — needs only 1 quantity
+    has_self_contained_op = any(op.type == "percent_of" for op in operations)
+    if not has_self_contained_op and (not quantities or len(quantities) < 2):
         return None
 
-    operations = extract_operations(text, quantities)
     if not operations:
         return None
 
@@ -306,7 +394,7 @@ def extract_claim(text: str) -> Optional[Claim]:
     if not equation or confidence < 0.5:
         return None
 
-    coverage_score = len(used_quantities) / len(quantities) if quantities else 0.0
+    coverage_score = len(used_quantities) / len(quantities) if quantities else 1.0
     unused_quantities = [quantity for quantity in quantities if quantity not in used_quantities]
     unresolved_spans = _find_unresolved_numeric_spans(text, quantities)
 
@@ -348,6 +436,7 @@ def _get_nearby_keywords(text: str, span: tuple[int, int], window: int = 24) -> 
 
 def _find_base_money_quantities(text: str, quantities: list[Quantity]) -> list[Quantity]:
     bases: list[Quantity] = []
+    earning_keywords = ["earn", "earned", "gain", "gained", "receive", "received", "deposit", "deposited"]
     for quantity in quantities:
         if quantity.unit != "dollars":
             continue
@@ -355,9 +444,24 @@ def _find_base_money_quantities(text: str, quantities: list[Quantity]) -> list[Q
         before = text[: max(0, text.find(quantity.span_text))].lower()
         if any(keyword in before.split() for keyword in ["spend", "spent", "pay", "paid", "cost", "bill", "bought"]):
             continue
+        # Amounts preceded by earning keywords are income, not a static starting balance
+        if any(keyword in before for keyword in earning_keywords):
+            continue
         bases.append(quantity)
 
     return bases
+
+
+def _find_claimed_numeric_value(text: str, exclude_values: set[float]) -> Optional[float]:
+    """Find a numeric value in text that looks like a claimed result, excluding known input values."""
+    cue_pattern = re.compile(
+        r"(?:equals?|=|is|gives?|result(?:s|ing)?(?:\s+in)?)\s*\$?(\d+(?:\.\d+)?)", re.I
+    )
+    for match in cue_pattern.finditer(text):
+        val = float(match.group(1))
+        if val not in exclude_values:
+            return val
+    return None
 
 
 def _select_percentage_base(quantities: list[Quantity]) -> Optional[Quantity]:
