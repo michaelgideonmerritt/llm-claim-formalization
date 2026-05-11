@@ -233,9 +233,10 @@ def synthesize_equation(
                 return expr, 0.78, used_quantities
 
     # Percent-of: "X% of Y equals Z" → Y * (X/100) == Z
-    percent_of_ops = [op for op in operations if op.type == "percent_of" and op.value is not None]
+    percent_of_ops = [op for op in operations if op.type == "percent_of" and op.value is not None and op.unit is not None]
     if percent_of_ops:
         op = percent_of_ops[0]
+        assert op.value is not None and op.unit is not None
         base_val = float(op.unit)  # stored in unit field as string of the base number
         expr = f"{base_val} * {op.value}"
         for q in quantities:
